@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Survey Validation Intelligence"
+description = "An enterprise dashboard for government statistical teams to upload survey datasets, review explainable anomalies, monitor regional risk, and manage validation rules."
+version = "1.0.0"
+id = "artifacts/survey-validation"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21630
+
+[services.development]
+run = "pnpm --filter @workspace/survey-validation run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/survey-validation", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/survey-validation/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21630"
+BASE_PATH = "/"

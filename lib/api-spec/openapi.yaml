@@ -1,0 +1,220 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: validation
+    description: Survey validation intelligence
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /validation/summary:
+    get:
+      operationId: getValidationSummary
+      tags: [validation]
+      summary: Get dashboard summary
+      description: Returns survey processing KPIs, regional anomaly counts, ingestion trend, and recent activity.
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationSummary"
+  /anomalies:
+    get:
+      operationId: getAnomalies
+      tags: [validation]
+      summary: List flagged survey records
+      description: Returns flagged records with explainable anomaly reasons.
+      parameters:
+        - name: risk
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [All, High, Medium, Low]
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Flagged records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnomalyRecord"
+  /upload:
+    post:
+      operationId: uploadSurvey
+      tags: [validation]
+      summary: Process a survey CSV upload
+      description: Accepts CSV content, validates records, and returns processing results.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadSurveyInput"
+      responses:
+        "200":
+          description: Upload processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResult"
+  /rules:
+    get:
+      operationId: getValidationRules
+      tags: [validation]
+      summary: List validation rules
+      responses:
+        "200":
+          description: Validation rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ValidationRule"
+    post:
+      operationId: createValidationRule
+      tags: [validation]
+      summary: Create a validation rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationRuleInput"
+      responses:
+        "201":
+          description: Created rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationRule"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    AnomalyRecord:
+      type: object
+      required: [id, recordId, enumeratorId, region, age, income, status, risk, reason, detectedAt]
+      properties:
+        id: { type: string }
+        recordId: { type: string }
+        enumeratorId: { type: string }
+        region: { type: string }
+        age: { type: number }
+        income: { type: number }
+        education: { type: string }
+        status: { type: string }
+        risk:
+          type: string
+          enum: [High, Medium, Low]
+        reason: { type: string }
+        detectedAt: { type: string }
+        score: { type: number }
+    RegionalAnomaly:
+      type: object
+      required: [region, anomalies, total]
+      properties:
+        region: { type: string }
+        anomalies: { type: number }
+        total: { type: number }
+    IngestionPoint:
+      type: object
+      required: [label, records]
+      properties:
+        label: { type: string }
+        records: { type: number }
+    ActivityItem:
+      type: object
+      required: [id, title, detail, time, tone]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        time: { type: string }
+        tone:
+          type: string
+          enum: [blue, green, orange, red]
+    ValidationSummary:
+      type: object
+      required: [totalRecords, totalAnomalies, highRiskEnumerators, anomalyRate, regionalAnomalies, ingestionTrend, activity]
+      properties:
+        totalRecords: { type: number }
+        totalAnomalies: { type: number }
+        highRiskEnumerators: { type: number }
+        anomalyRate: { type: number }
+        regionalAnomalies:
+          type: array
+          items: { $ref: "#/components/schemas/RegionalAnomaly" }
+        ingestionTrend:
+          type: array
+          items: { $ref: "#/components/schemas/IngestionPoint" }
+        activity:
+          type: array
+          items: { $ref: "#/components/schemas/ActivityItem" }
+    UploadSurveyInput:
+      type: object
+      required: [fileName, csvContent]
+      properties:
+        fileName: { type: string, minLength: 1 }
+        csvContent: { type: string, minLength: 1 }
+    UploadResult:
+      type: object
+      required: [fileName, recordsProcessed, anomaliesFound, highRiskCount]
+      properties:
+        fileName: { type: string }
+        recordsProcessed: { type: number }
+        anomaliesFound: { type: number }
+        highRiskCount: { type: number }
+    ValidationRule:
+      type: object
+      required: [id, name, condition, action, status, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        condition: { type: string }
+        action: { type: string }
+        status:
+          type: string
+          enum: [Active, Draft]
+        createdAt: { type: string }
+    ValidationRuleInput:
+      type: object
+      required: [name, condition, action]
+      properties:
+        name: { type: string, minLength: 1 }
+        condition: { type: string, minLength: 1 }
+        action: { type: string, minLength: 1 }
+
