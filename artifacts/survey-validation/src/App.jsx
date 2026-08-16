@@ -49,6 +49,9 @@ import {
   Cell,
   Line,
   LineChart,
+  PieChart,
+  Pie,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -57,55 +60,8 @@ import {
 
 const queryClient = new QueryClient();
 
-const demoSummary = {
-  totalRecords: 18426,
-  totalAnomalies: 672,
-  highRiskEnumerators: 18,
-  anomalyRate: 3.64,
-  regionalAnomalies: [
-    { region: 'North East', anomalies: 146, total: 3380 },
-    { region: 'North West', anomalies: 128, total: 2970 },
-    { region: 'Yorkshire', anomalies: 94, total: 2450 },
-    { region: 'West Midlands', anomalies: 88, total: 2140 },
-    { region: 'East Midlands', anomalies: 76, total: 1980 },
-    { region: 'South West', anomalies: 71, total: 1910 },
-    { region: 'South East', anomalies: 69, total: 2546 },
-  ],
-  ingestionTrend: [
-    { label: '04 Mar', records: 1240 },
-    { label: '05 Mar', records: 1880 },
-    { label: '06 Mar', records: 1460 },
-    { label: '07 Mar', records: 2340 },
-    { label: '08 Mar', records: 2140 },
-    { label: '09 Mar', records: 2960 },
-    { label: '10 Mar', records: 3410 },
-    { label: '11 Mar', records: 2996 },
-  ],
-  activity: [
-    { id: 'a1', title: 'North East batch reviewed', detail: '146 flagged records • 11 escalated', time: '12 min ago', tone: 'orange' },
-    { id: 'a2', title: 'New survey file ingested', detail: 'March_2024_wave3.csv • 2,996 rows', time: '48 min ago', tone: 'green' },
-    { id: 'a3', title: 'Rule set updated', detail: 'Income-to-hours ratio check is now active', time: '2 hr ago', tone: 'blue' },
-    { id: 'a4', title: 'Enumerator E-1048 crossed threshold', detail: '7 high-confidence anomalies in 24 records', time: '3 hr ago', tone: 'red' },
-  ],
-};
 
-const demoAnomalies = [
-  { id: 'AN-49281', recordId: 'HH-NE-009184', enumeratorId: 'E-1048', region: 'North East', age: 23, income: 84000, education: 'A-level', status: 'Flagged', risk: 'High', reason: 'Reported annual income is inconsistent with stated weekly hours and occupation band.', detectedAt: '2024-03-11T09:42:00Z', score: 0.96 },
-  { id: 'AN-49280', recordId: 'HH-NW-003521', enumeratorId: 'E-1102', region: 'North West', age: 61, income: 0, education: 'GCSE', status: 'Needs review', risk: 'High', reason: 'Zero income reported alongside active full-time employment and regular hours.', detectedAt: '2024-03-11T09:31:00Z', score: 0.91 },
-  { id: 'AN-49279', recordId: 'HH-YK-008702', enumeratorId: 'E-0971', region: 'Yorkshire', age: 34, income: 12800, education: 'Degree', status: 'Flagged', risk: 'Medium', reason: 'Income is 2.7 standard deviations below the regional occupation cohort.', detectedAt: '2024-03-11T09:18:00Z', score: 0.78 },
-  { id: 'AN-49278', recordId: 'HH-WM-001904', enumeratorId: 'E-0864', region: 'West Midlands', age: 47, income: 72000, education: 'Degree', status: 'Flagged', risk: 'Medium', reason: 'Household income conflicts with individual wage contribution and household size.', detectedAt: '2024-03-11T08:55:00Z', score: 0.73 },
-  { id: 'AN-49277', recordId: 'HH-EM-005116', enumeratorId: 'E-1169', region: 'East Midlands', age: 19, income: 46500, education: 'Degree', status: 'Needs review', risk: 'Low', reason: 'Age-to-occupation combination is rare within this survey wave.', detectedAt: '2024-03-11T08:41:00Z', score: 0.57 },
-  { id: 'AN-49276', recordId: 'HH-SW-007234', enumeratorId: 'E-1022', region: 'South West', age: 52, income: 19600, education: 'GCSE', status: 'Flagged', risk: 'Medium', reason: 'Reported annual income does not reconcile with monthly pay frequency.', detectedAt: '2024-03-11T08:26:00Z', score: 0.68 },
-  { id: 'AN-49275', recordId: 'HH-SE-004878', enumeratorId: 'E-0952', region: 'South East', age: 28, income: 96500, education: 'Degree', status: 'Needs review', risk: 'Low', reason: 'Income is outside the expected interquartile range for selected industry and age.', detectedAt: '2024-03-11T08:03:00Z', score: 0.49 },
-  { id: 'AN-49274', recordId: 'HH-NE-009021', enumeratorId: 'E-1048', region: 'North East', age: 40, income: 11000, education: 'No formal qualification', status: 'Flagged', risk: 'High', reason: 'Repeated low-income response pattern observed across the same enumerator sample.', detectedAt: '2024-03-11T07:44:00Z', score: 0.88 },
-];
 
-const demoRules = [
-  { id: 'VR-018', name: 'Income / hours reconciliation', condition: 'annual_income > 0 AND weekly_hours > 0 AND income_per_hour < regional_p10', action: 'Flag for analyst review', status: 'Active', createdAt: '2024-03-08T15:40:00Z' },
-  { id: 'VR-017', name: 'Employment age boundary', condition: 'employment_status = "employed" AND age < 16', action: 'Reject record', status: 'Active', createdAt: '2024-03-05T10:12:00Z' },
-  { id: 'VR-016', name: 'Zero income with active work', condition: 'annual_income = 0 AND weekly_hours >= 16', action: 'Flag for analyst review', status: 'Active', createdAt: '2024-02-27T09:18:00Z' },
-  { id: 'VR-015', name: 'Household size completeness', condition: 'household_size IS NULL OR household_size < 1', action: 'Return to enumerator', status: 'Draft', createdAt: '2024-02-21T16:05:00Z' },
-];
 
 const formatNumber = (value) => new Intl.NumberFormat('en-GB').format(value ?? 0);
 const formatCurrency = (value) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(value ?? 0);
@@ -185,6 +141,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/upload" element={<UploadPage />} />
+          <Route path="/upload-results" element={<UploadResultsPage />} />
           <Route path="/anomalies" element={<AnomaliesPage />} />
           <Route path="/rules" element={<RulesPage />} />
           <Route path="*" element={<NotFoundPage />} />
@@ -225,9 +182,10 @@ function TopBar() {
 
 function DashboardPage() {
   const summaryQuery = useGetValidationSummary({ query: { queryKey: getGetValidationSummaryQueryKey() } });
-  const summary = summaryQuery.data ?? demoSummary;
-  const isDemo = !summaryQuery.data;
+  const summary = summaryQuery.data || { totalRecords: 0, totalAnomalies: 0, highRiskEnumerators: 0, anomalyRate: 0, regionalAnomalies: [], ingestionTrend: [], activity: [] };
+  const isDemo = false;
   const navigate = useNavigate();
+  const [showAudit, setShowAudit] = useState(false);
 
   return (
     <main className="content-wrap page-enter">
@@ -238,7 +196,8 @@ function DashboardPage() {
           <p className="mt-5 max-w-[32rem] text-[14px] leading-relaxed text-[#72756e]">A clear view of the quality signals across the employment and income survey. Start broad, then follow any record to its evidence.</p>
         </div>
         <div className="flex items-center gap-2">
-          {isDemo && <span className="mono-font rounded-full border border-[#dbcec0] bg-[#f8f3e9] px-3 py-2 text-[9px] uppercase tracking-[.1em] text-[#8c755f]">Illustrative workspace</span>}
+          
+          {isDemo && <span className="mono-font rounded-full border border-[#dbcec0] bg-[#f8f3e9] px-3 py-2 text-[9px] uppercase tracking-[.1em] text-[#8c755f]">10k Seed Data View</span>}
           <button onClick={() => navigate('/upload')} className="flex items-center gap-2 rounded-lg bg-[#d35d45] px-4 py-2.5 text-[12px] font-semibold text-[#fff5e9] shadow-[0_7px_18px_rgba(192,76,52,.18)] transition hover:-translate-y-0.5" data-testid="button-ingest-survey"><UploadCloud size={15} /> Ingest survey</button>
         </div>
       </section>
@@ -256,9 +215,11 @@ function DashboardPage() {
       </section>
 
       <section className="mt-3 grid gap-3 xl:grid-cols-[1.18fr_.82fr]">
-        <ActivityPanel data={summary.activity} />
+        <ActivityPanel data={summary.activity} onViewAll={() => setShowAudit(true)} />
         <SignalCard onOpen={() => navigate('/anomalies')} />
       </section>
+      
+      {showAudit && <AuditModal data={summary.activity} onClose={() => setShowAudit(false)} />}
     </main>
   );
 }
@@ -282,7 +243,7 @@ function MetricCard({ label, value, note, icon: Icon, tone, trend, trendUp }) {
 }
 
 function RegionalChart({ data }) {
-  const rows = data?.length ? data : demoSummary.regionalAnomalies;
+  const rows = data || [];
   return (
     <article className="surface rounded-xl p-5 sm:p-6">
       <div className="flex items-start justify-between">
@@ -308,7 +269,7 @@ function RegionalChart({ data }) {
 }
 
 function IngestionChart({ data }) {
-  const rows = data?.length ? data : demoSummary.ingestionTrend;
+  const rows = data || [];
   return (
     <article className="surface rounded-xl p-5 sm:p-6">
       <div className="flex items-start justify-between"><div><p className="eyebrow">02 / Throughput</p><h2 className="mt-2 text-[17px] font-semibold tracking-[-.02em]">Ingestion pulse</h2><p className="mt-1 text-[11px] text-[#81837c]">Records received over the last 8 days</p></div><span className="rounded-lg bg-[#dcebe5] p-2 text-[#3b806d]"><Activity size={16} /></span></div>
@@ -333,10 +294,27 @@ function ChartTooltip({ active, payload, label, suffix = '' }) {
   return <div className="rounded-lg border border-[#d8d4cc] bg-[#273446] px-3 py-2 text-[#f7f1e7] shadow-lg"><p className="mono-font text-[9px] uppercase tracking-[.08em] text-[#d7dacf]">{label}</p><p className="mt-1 text-[12px] font-semibold">{formatNumber(payload[0].value)}{suffix}</p></div>;
 }
 
-function ActivityPanel({ data }) {
+function ActivityPanel({ data, onViewAll }) {
   const tones = { orange: '#d35d45', green: '#3e8c6c', blue: '#507e9b', red: '#b74d39' };
-  const rows = data?.length ? data : demoSummary.activity;
-  return <article className="surface rounded-xl p-5 sm:p-6"><div className="flex items-center justify-between"><div><p className="eyebrow">03 / Audit trail</p><h2 className="mt-2 text-[17px] font-semibold tracking-[-.02em]">Recent activity</h2></div><button className="text-[11px] font-semibold text-[#b74d39] transition hover:text-[#8c392a]" onClick={() => window.alert('The full audit trail is available in the export view.')} data-testid="button-view-audit">View audit trail <ChevronRight className="inline" size={13} /></button></div><div className="mt-5 divide-y divide-[#e7e2da]">{rows.map((item) => <div className="flex gap-3 py-3 first:pt-0 last:pb-0" key={item.id} data-testid={`activity-item-${item.id}`}><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: tones[item.tone] || tones.blue }} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className="text-[12px] font-semibold text-[#35414e]">{item.title}</p><span className="mono-font shrink-0 text-[9px] text-[#96968e]">{item.time}</span></div><p className="mt-1 text-[11px] text-[#85877f]">{item.detail}</p></div></div>)}</div></article>;
+  const rows = data || [];
+  return <article className="surface rounded-xl p-5 sm:p-6"><div className="flex items-center justify-between"><div><p className="eyebrow">03 / Audit trail</p><h2 className="mt-2 text-[17px] font-semibold tracking-[-.02em]">Recent activity</h2></div><button className="text-[11px] font-semibold text-[#b74d39] transition hover:text-[#8c392a]" onClick={onViewAll} data-testid="button-view-audit">View audit trail <ChevronRight className="inline" size={13} /></button></div><div className="mt-5 divide-y divide-[#e7e2da]">{rows.slice(0, 5).map((item) => <div className="flex gap-3 py-3 first:pt-0 last:pb-0" key={item.id} data-testid={`activity-item-${item.id}`}><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: tones[item.tone] || tones.blue }} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className="text-[12px] font-semibold text-[#35414e]">{item.title}</p><span className="mono-font shrink-0 text-[9px] text-[#96968e]">{item.time}</span></div><p className="mt-1 text-[11px] text-[#85877f]">{item.detail}</p></div></div>)}</div></article>;
+}
+
+function AuditModal({ data, onClose }) {
+  const tones = { orange: '#d35d45', green: '#3e8c6c', blue: '#507e9b', red: '#b74d39' };
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+
+    const close = (event) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', close);
+    return () => {
+      window.removeEventListener('keydown', close);
+      document.body.style.overflow = originalStyle;
+    };
+  }, [onClose]);
+  
+  return <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-[#172338]/40 p-4 sm:p-6" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><article className="modal-card max-h-[92dvh] w-full max-w-[500px] overflow-y-auto rounded-2xl bg-[#fbfaf6] p-5 shadow-2xl sm:p-7"><div className="flex items-start justify-between"><div><span className="eyebrow text-[#b74d39]">System Logs</span><h2 className="mono-font mt-2 text-[19px] font-bold text-[#273446]">Audit Trail</h2><p className="mt-1 text-[11px] text-[#85877f]">History of recent data uploads and actions.</p></div><button onClick={onClose} className="rounded-lg p-2 text-[#777a74] transition hover:bg-[#eeeae3]"><X size={18} /></button></div><div className="mt-7 divide-y divide-[#e7e2da]">{data.map((item) => <div className="flex gap-3 py-4 first:pt-0" key={item.id}><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: tones[item.tone] || tones.blue }} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><p className="text-[12px] font-semibold text-[#35414e]">{item.title}</p><span className="mono-font shrink-0 text-[9px] text-[#96968e]">{item.time}</span></div><p className="mt-1 text-[11px] text-[#85877f]">{item.detail}</p></div></div>)}</div></article></div>;
 }
 
 function SignalCard({ onOpen }) {
@@ -344,10 +322,13 @@ function SignalCard({ onOpen }) {
 }
 
 function UploadPage() {
+  const navigate = useNavigate();
   const uploadMutation = useUploadSurvey();
   const queryClientRef = useQueryClient();
   const [file, setFile] = useState(null);
   const [csvContent, setCsvContent] = useState('');
+  const [imageBase64, setImageBase64] = useState('');
+  const [mimeType, setMimeType] = useState('');
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [message, setMessage] = useState('');
@@ -357,9 +338,26 @@ function UploadPage() {
     setFile(selected);
     setResult(null);
     setMessage('');
-    const reader = new FileReader();
-    reader.onload = (event) => setCsvContent(String(event.target?.result || ''));
-    reader.readAsText(selected);
+    
+    if (selected.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = String(event.target?.result || '');
+        const base64 = dataUrl.split(',')[1];
+        setImageBase64(base64);
+        setMimeType(selected.type);
+        setCsvContent('');
+      };
+      reader.readAsDataURL(selected);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCsvContent(String(event.target?.result || ''));
+        setImageBase64('');
+        setMimeType('');
+      };
+      reader.readAsText(selected);
+    }
   };
 
   const useSample = () => {
@@ -370,15 +368,40 @@ function UploadPage() {
     setMessage('');
   };
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
-    if (!file || !csvContent) {
-      setMessage('Choose a CSV file before starting validation.');
+    if (!file || (!csvContent && !imageBase64)) {
+      setMessage('Choose a CSV file or image before starting validation.');
       return;
     }
     setProgress(12);
     setMessage('');
     const progressTimer = window.setInterval(() => setProgress((value) => value >= 86 ? value : value + 13), 350);
+
+    if (imageBase64) {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/api/upload-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64, mimeType, fileName: file.name })
+        });
+        if (!response.ok) throw new Error('Image validation failed');
+        const data = await response.json();
+        
+        window.clearInterval(progressTimer);
+        setProgress(100);
+        setResult(data);
+        queryClientRef.invalidateQueries({ queryKey: getGetValidationSummaryQueryKey() });
+        queryClientRef.invalidateQueries({ queryKey: getGetAnomaliesQueryKey() });
+        navigate('/upload-results', { state: { result: data } });
+      } catch (error) {
+        window.clearInterval(progressTimer);
+        setProgress(100);
+        setMessage('OCR Processing failed. Ensure your backend is running.');
+      }
+      return;
+    }
+
     uploadMutation.mutate({ data: { fileName: file.name, csvContent } }, {
       onSuccess: (data) => {
         window.clearInterval(progressTimer);
@@ -386,14 +409,17 @@ function UploadPage() {
         setResult(data);
         queryClientRef.invalidateQueries({ queryKey: getGetValidationSummaryQueryKey() });
         queryClientRef.invalidateQueries({ queryKey: getGetAnomaliesQueryKey() });
+        navigate('/upload-results', { state: { result: data } });
       },
       onError: () => {
         window.clearInterval(progressTimer);
         window.setTimeout(() => {
           const lines = csvContent.trim().split(/\r?\n/).filter(Boolean);
           setProgress(100);
-          setResult({ fileName: file.name, recordsProcessed: Math.max(lines.length - 1, 3), anomaliesFound: Math.min(8, Math.max(1, lines.length - 1)), highRiskCount: 1 });
+          const mockResult = { fileName: file.name, recordsProcessed: Math.max(lines.length - 1, 3), anomaliesFound: Math.min(8, Math.max(1, lines.length - 1)), highRiskCount: 1 };
+          setResult(mockResult);
           setMessage('Preview complete. The connected validation service will replace this result when available.');
+          navigate('/upload-results', { state: { result: mockResult } });
         }, 420);
       },
     });
@@ -403,8 +429,26 @@ function UploadPage() {
     <form onSubmit={submit} className="mt-10 grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
       <div className="surface rounded-xl p-5 sm:p-8">
         <div className="flex items-center justify-between"><div><p className="eyebrow">01 / Source file</p><h2 className="mt-2 text-[17px] font-semibold">Select a CSV extract</h2></div><FileSpreadsheet className="text-[#4b8d84]" size={22} /></div>
-        <label htmlFor="survey-file" className={`mt-7 flex min-h-[238px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-5 text-center transition ${file ? 'border-[#4b8d84] bg-[#e5f0ea]' : 'border-[#cfc9bf] bg-[#faf8f3] hover:border-[#b74d39] hover:bg-[#fbf2eb]'}`} data-testid="dropzone-survey-file"><input id="survey-file" type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => readFile(event.target.files?.[0])} data-testid="input-survey-file" />{file ? <><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#cce5d8] text-[#30735f]"><FileCheck2 size={22} /></span><p className="mt-4 text-[13px] font-semibold text-[#315c52]">{file.name}</p><p className="mono-font mt-1 text-[10px] text-[#609083]">{formatNumber(file.size)} bytes · Ready to validate</p><span className="mt-4 text-[11px] font-semibold text-[#b74d39]">Choose a different file</span></> : <><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f0ddd5] text-[#b74d39]"><UploadCloud size={22} /></span><p className="mt-4 text-[13px] font-semibold text-[#35414e]">Drop a CSV here, or browse files</p><p className="mt-1 text-[11px] text-[#85877f]">UTF-8 encoded · maximum 50 MB</p></>}</label>
-        {!file && <button type="button" onClick={useSample} className="mt-4 flex items-center gap-2 text-[11px] font-semibold text-[#b74d39] transition hover:text-[#8c392a]" data-testid="button-use-sample"><Sparkles size={13} /> Use a sample extract to explore</button>}
+        <label htmlFor="survey-file" className={`mt-7 flex min-h-[238px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-5 text-center transition ${file ? 'border-[#4b8d84] bg-[#e5f0ea]' : 'border-[#cfc9bf] bg-[#faf8f3] hover:border-[#b74d39] hover:bg-[#fbf2eb]'}`} data-testid="dropzone-survey-file"><input id="survey-file" type="file" accept=".csv,text/csv,image/jpeg,image/png,image/jpg" capture="environment" className="sr-only" onChange={(event) => readFile(event.target.files?.[0])} data-testid="input-survey-file" />{file ? <><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#cce5d8] text-[#30735f]"><FileCheck2 size={22} /></span><p className="mt-4 text-[13px] font-semibold text-[#315c52]">{file.name}</p><p className="mono-font mt-1 text-[10px] text-[#609083]">{formatNumber(file.size)} bytes · Ready to validate</p><span className="mt-4 text-[11px] font-semibold text-[#b74d39]">Choose a different file</span></> : <><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f0ddd5] text-[#b74d39]"><UploadCloud size={22} /></span><p className="mt-4 text-[13px] font-semibold text-[#35414e]">Drop a CSV or image here, or browse files</p><p className="mt-1 text-[11px] text-[#85877f]">CSV, JPEG, PNG · Take a photo on mobile</p></>}</label>
+        {!file && <div className="mt-4 flex flex-col gap-3 sm:flex-row"><button type="button" onClick={useSample} className="flex items-center gap-2 text-[11px] font-semibold text-[#b74d39] transition hover:text-[#8c392a]" data-testid="button-use-sample"><Sparkles size={13} /> Use a sample extract to explore</button><button type="button" onClick={async () => {
+          setMessage('Pinging real-time API...');
+          try {
+            const res = await fetch('http://127.0.0.1:5000/api/ingest', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ record_id: `RT-${Date.now()}`, enumerator_id: 'ENUM-RT', region: 'North', age: 14, income: 50000, education: 'PhD', employment_status: 'employed' })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+              setMessage(`Real-time ping successful! Record flagged: ${data.is_anomaly}. Reason: ${data.reason}`);
+              queryClientRef.invalidateQueries({ queryKey: getGetValidationSummaryQueryKey() });
+            } else {
+              setMessage('Real-time ping failed.');
+            }
+          } catch(e) {
+             setMessage('Error contacting real-time API.');
+          }
+        }} className="flex items-center gap-2 text-[11px] font-semibold text-[#3b806d] transition hover:text-[#2c6152]"><Activity size={13} /> Simulate Real-Time Stream (Single Record)</button></div>}
       </div>
       <div className="surface flex flex-col rounded-xl p-5 sm:p-8">
         <div><p className="eyebrow">02 / Validation pass</p><h2 className="mt-2 text-[17px] font-semibold">Run quality checks</h2><p className="mt-2 text-[12px] leading-relaxed text-[#85877f]">Every upload is checked against the active rule set and compared with the current regional baseline.</p></div>
@@ -435,11 +479,40 @@ function AnomaliesPage() {
   const [selected, setSelected] = useState(null);
   const params = useMemo(() => ({ ...(risk !== 'All' ? { risk } : {}), ...(search ? { search } : {}) }), [risk, search]);
   const anomalyQuery = useGetAnomalies(params, { query: { queryKey: getGetAnomaliesQueryKey(params) } });
-  const baseRows = anomalyQuery.data ?? demoAnomalies;
+  const baseRows = anomalyQuery.data || [];
   const rows = baseRows.filter((item) => (risk === 'All' || item.risk === risk) && (!search || [item.recordId, item.enumeratorId, item.region, item.reason].join(' ').toLowerCase().includes(search.toLowerCase())));
-  const isDemo = !anomalyQuery.data;
+  const isDemo = false;
+  
+  const exportToCSV = () => {
+    if (!rows.length) return;
+    const headers = ['Record ID', 'Enumerator', 'Region', 'Age', 'Income', 'Education', 'Risk', 'Score', 'Reason'];
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => [
+        row.recordId,
+        row.enumeratorId,
+        row.region,
+        row.age,
+        row.income,
+        `"${row.education || ''}"`,
+        row.risk,
+        row.score,
+        `"${row.reason?.replace(/"/g, '""') || ''}"`
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `anomaly_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-  return <main className="content-wrap page-enter"><section className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><div className="eyebrow flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#d35d45]" /> Explainable review</div><h1 className="display-font mt-3 text-[clamp(2.65rem,5vw,4.25rem)] leading-[.94] tracking-[-.03em]">Follow the<br /><em className="text-[#b74d39]">evidence.</em></h1><p className="mt-5 max-w-[35rem] text-[14px] leading-relaxed text-[#72756e]">Each flagged record carries a reason, a confidence score, and the context needed to make a defensible decision.</p></div><div className="flex items-center gap-2"><span className="mono-font rounded-full bg-[#f0ddd5] px-3 py-2 text-[10px] text-[#9e4d3b]">{formatNumber(rows.length)} visible records</span><button onClick={() => window.alert('Report export is queued for this workspace.')} className="flex items-center gap-2 rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-3 py-2.5 text-[11px] font-semibold text-[#42515a] transition hover:border-[#b74d39]" data-testid="button-export-anomalies"><Download size={14} /> Export</button></div></section>
+  return <main className="content-wrap page-enter"><section className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><div className="eyebrow flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#d35d45]" /> Explainable review</div><h1 className="display-font mt-3 text-[clamp(2.65rem,5vw,4.25rem)] leading-[.94] tracking-[-.03em]">Follow the<br /><em className="text-[#b74d39]">evidence.</em></h1><p className="mt-5 max-w-[35rem] text-[14px] leading-relaxed text-[#72756e]">Each flagged record carries a reason, a confidence score, and the context needed to make a defensible decision.</p></div><div className="flex items-center gap-2"><span className="mono-font rounded-full bg-[#f0ddd5] px-3 py-2 text-[10px] text-[#9e4d3b]">{formatNumber(rows.length)} visible records</span><button onClick={exportToCSV} className="flex items-center gap-2 rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-3 py-2.5 text-[11px] font-semibold text-[#42515a] transition hover:border-[#b74d39]" data-testid="button-export-anomalies"><Download size={14} /> Export</button></div></section>
     <section className="surface mt-10 overflow-hidden rounded-xl"><div className="flex flex-col gap-3 border-b border-[#e3ded6] p-4 sm:flex-row sm:items-center sm:justify-between"><div className="relative flex-1 sm:max-w-[24rem]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#92948c]" /><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search record, enumerator, region…" className="h-10 w-full rounded-lg border border-[#d7d1c8] bg-[#fbfaf6] pl-9 pr-3 text-[12px] outline-none transition placeholder:text-[#9b9b93] focus:border-[#b74d39] focus:ring-2 focus:ring-[#d35d45]/10" data-testid="input-anomaly-search" /></div><div className="flex items-center gap-2"><Filter size={14} className="text-[#85877f]" /><span className="mono-font text-[9px] uppercase tracking-[.1em] text-[#85877f]">Risk</span>{['All', 'High', 'Medium', 'Low'].map((value) => <button key={value} onClick={() => setRisk(value)} className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition ${risk === value ? 'bg-[#273446] text-[#f4f0e9]' : 'text-[#74766f] hover:bg-[#eeeae3]'}`} data-testid={`button-filter-risk-${value.toLowerCase()}`}>{value}</button>)}</div></div>
       {anomalyQuery.isLoading && !anomalyQuery.data ? <TableSkeleton /> : rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left"><thead className="bg-[#f5f1ea]"><tr className="mono-font text-[9px] uppercase tracking-[.1em] text-[#878980]"><th className="px-5 py-3 font-normal">Record / enumerator</th><th className="px-4 py-3 font-normal">Region</th><th className="px-4 py-3 font-normal">Profile</th><th className="px-4 py-3 font-normal">Reason</th><th className="px-4 py-3 font-normal">Risk</th><th className="px-4 py-3 font-normal">Score</th><th className="px-4 py-3 font-normal" /></tr></thead><tbody className="divide-y divide-[#ebe6df]">{rows.map((row) => <AnomalyRow key={row.id} row={row} onSelect={setSelected} />)}</tbody></table></div> : <EmptyAnomalies onClear={() => { setSearch(''); setRisk('All'); }} />}
       <div className="flex items-center justify-between border-t border-[#e3ded6] px-5 py-3"><span className="text-[10px] text-[#92938c]">{isDemo ? 'Illustrative records shown while the service connects' : 'Live records from validation service'}</span><span className="mono-font text-[9px] uppercase tracking-[.1em] text-[#a09e96]">Click a row for explanation</span></div>
@@ -486,7 +559,7 @@ function RulesPage() {
   const [form, setForm] = useState({ name: '', condition: '', action: 'Flag for analyst review' });
   const [showForm, setShowForm] = useState(false);
   const [notice, setNotice] = useState('');
-  const serverRules = rulesQuery.data ?? demoRules;
+  const serverRules = rulesQuery.data || [];
   const rules = [...localRules, ...serverRules];
 
   const updateForm = (key, value) => setForm((current) => ({ ...current, [key]: value }));
@@ -528,6 +601,80 @@ function RuleRow({ rule }) {
 function NotFoundPage() {
   const navigate = useNavigate();
   return <main className="content-wrap flex min-h-[70dvh] items-center justify-center"><div className="text-center"><span className="mono-font text-[10px] uppercase tracking-[.15em] text-[#b74d39]">Signal lost / 404</span><h1 className="display-font mt-4 text-6xl">Nothing here.</h1><p className="mt-3 text-[13px] text-[#85877f]">This workspace path does not exist.</p><button onClick={() => navigate('/')} className="mt-7 rounded-lg bg-[#273446] px-4 py-2.5 text-[11px] font-semibold text-[#f4f0e9]" data-testid="button-return-overview">Return to overview</button></div></main>;
+}
+
+function UploadResultsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const result = location.state?.result;
+
+  if (!result) {
+    return <main className="content-wrap page-enter flex min-h-[50dvh] flex-col items-center justify-center">
+      <span className="mono-font text-[10px] uppercase tracking-[.15em] text-[#b74d39]">No Data</span>
+      <h1 className="display-font mt-4 text-4xl">No results found.</h1>
+      <button onClick={() => navigate('/upload')} className="mt-7 rounded-lg bg-[#273446] px-4 py-2.5 text-[11px] font-semibold text-[#f4f0e9]">Go Back</button>
+    </main>;
+  }
+
+  const cleanCount = result.recordsProcessed - result.anomaliesFound;
+  const mediumRiskCount = result.anomaliesFound - result.highRiskCount;
+
+  const pieData1 = [
+    { name: 'Clean Records', value: cleanCount, fill: '#4b8d84' },
+    { name: 'Anomalies', value: result.anomaliesFound, fill: '#d35d45' }
+  ];
+
+  const pieData2 = [
+    { name: 'High Risk', value: result.highRiskCount, fill: '#d35d45' },
+    { name: 'Medium/Low Risk', value: mediumRiskCount, fill: '#e8b06a' }
+  ];
+
+  return (
+    <main className="content-wrap page-enter">
+      <section className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <div>
+          <div className="eyebrow flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#4b8d84]" /> Results Summary</div>
+          <h1 className="display-font mt-3 text-[clamp(2.7rem,5vw,4.3rem)] leading-[.94] tracking-[-.03em]">Validation<br /><em className="text-[#4b8d84]">complete.</em></h1>
+          <p className="mt-5 text-[14px] leading-relaxed text-[#72756e]">Here is the breakdown of the {formatNumber(result.recordsProcessed)} records you just processed.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate('/upload')} className="rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-4 py-2.5 text-[11px] font-semibold text-[#42515a] transition hover:border-[#b74d39]">Upload Another</button>
+          <button onClick={() => navigate('/anomalies')} className="flex items-center gap-2 rounded-lg bg-[#273446] px-4 py-2.5 text-[11px] font-semibold text-[#f4f0e9] transition hover:-translate-y-0.5 hover:bg-[#1c2839]">View Anomaly Report</button>
+        </div>
+      </section>
+
+      <div className="mt-10 grid gap-6 md:grid-cols-2">
+        <div className="surface rounded-xl p-8 shadow-sm">
+          <h2 className="text-[17px] font-semibold mb-6 text-center text-[#35414e]">Clean vs Anomalies</h2>
+          <div className="h-[280px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pieData1} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} label>
+                  {pieData1.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36}/>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="surface rounded-xl p-8 shadow-sm">
+          <h2 className="text-[17px] font-semibold mb-6 text-center text-[#35414e]">Anomaly Risk Breakdown</h2>
+          <div className="h-[280px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pieData2} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                  {pieData2.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36}/>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }
 
 export default App;

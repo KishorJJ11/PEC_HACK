@@ -2,10 +2,12 @@ import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
 import { AnomalyRecord } from "../mongodb-models/AnomalyRecord.js";
+import { UploadLog } from "../mongodb-models/UploadLog.js";
+import { ValidationRule } from "../mongodb-models/ValidationRule.js";
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
-const aiServiceUrl = process.env.AI_SERVICE_URL || "http://localhost:8001";
+const aiServiceUrl = process.env.AI_SERVICE_URL || "http://127.0.0.1:8001";
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
@@ -70,11 +72,137 @@ app.post("/api/upload", async (request, response, next) => {
       }));
 
     const saved = await AnomalyRecord.insertMany(documents);
+    
+    await UploadLog.create({
+      fileName,
+      recordsProcessed: sourceRows.length,
+      anomaliesFound: saved.length,
+      highRiskCount: saved.filter((row) => row.risk === "High").length,
+    });
+
     return response.json({
       fileName,
       recordsProcessed: sourceRows.length,
       anomaliesFound: saved.length,
       highRiskCount: saved.filter((row) => row.risk === "High").length,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.post("/api/upload-image", async (request, response, next) => {
+  try {
+    const { imageBase64, mimeType, fileName } = request.body;
+    if (!imageBase64 || !mimeType || !fileName) {
+      return response.status(400).json({ error: "imageBase64, mimeType, and fileName are required" });
+    }
+
+    const aiResponse = await fetch(`${aiServiceUrl}/validate-image`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ image_base64: imageBase64, mime_type: mimeType, fileName }),
+    });
+
+    if (!aiResponse.ok) {
+      return response.status(502).json({ error: "AI validation service unavailable for images" });
+    }
+
+    const result = await aiResponse.json();
+    const validatedRows = result.records || [];
+    
+    const documents = validatedRows
+      .filter((row) => row.is_anomaly)
+      .map((row) => ({
+        recordId: row.record_id || "IMG-GEN",
+        enumeratorId: row.enumerator_id || "Unknown",
+        region: row.region || "Unspecified",
+        age: Number(row.age || 0),
+        income: Number(row.income || 0),
+        education: row.education || "",
+        status: "Flagged",
+        risk: row.anomaly_reason?.includes("Isolation Forest") ? "High" : "Medium",
+        reason: row.anomaly_reason,
+        score: Math.min((row.anomaly_reason?.length || 0) * 0.01 + 0.4, 0.98),
+      }));
+
+    if (documents.length > 0) {
+      await AnomalyRecord.insertMany(documents);
+    }
+    
+    await UploadLog.create({
+      fileName,
+      recordsProcessed: result.recordsProcessed,
+      anomaliesFound: documents.length,
+      highRiskCount: documents.filter((row) => row.risk === "High").length,
+    });
+
+    return response.json({
+      fileName,
+      recordsProcessed: result.recordsProcessed,
+      anomaliesFound: documents.length,
+      highRiskCount: documents.filter((row) => row.risk === "High").length,
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.post("/api/ingest", async (request, response, next) => {
+  try {
+    const record = request.body;
+    if (!record || !record.record_id) {
+      return response.status(400).json({ error: "record_id is required" });
+    }
+
+    const aiResponse = await fetch(`${aiServiceUrl}/validate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify([toAiRecord(record)]),
+    });
+
+    if (!aiResponse.ok) {
+      return response.status(502).json({ error: "AI validation service unavailable" });
+    }
+
+    const validatedRows = await aiResponse.json();
+    const processedRecord = validatedRows[0];
+
+    if (processedRecord && processedRecord.is_anomaly) {
+      const anomalyDoc = {
+        recordId: processedRecord.record_id || "Unknown",
+        enumeratorId: processedRecord.enumerator_id || "Unknown",
+        region: processedRecord.region || "Unspecified",
+        age: Number(processedRecord.age || 0),
+        income: Number(processedRecord.income || 0),
+        education: processedRecord.education || "",
+        status: "Flagged",
+        risk: processedRecord.anomaly_reason?.includes("Isolation Forest") ? "High" : "Medium",
+        reason: processedRecord.anomaly_reason,
+        score: Math.min((processedRecord.anomaly_reason?.length || 0) * 0.01 + 0.4, 0.98),
+      };
+      await AnomalyRecord.create(anomalyDoc);
+      
+      await UploadLog.create({
+        fileName: "Real-time API",
+        recordsProcessed: 1,
+        anomaliesFound: 1,
+        highRiskCount: anomalyDoc.risk === "High" ? 1 : 0,
+      });
+    } else {
+      await UploadLog.create({
+        fileName: "Real-time API",
+        recordsProcessed: 1,
+        anomaliesFound: 0,
+        highRiskCount: 0,
+      });
+    }
+
+    return response.json({
+      status: "success",
+      is_anomaly: processedRecord.is_anomaly || false,
+      reason: processedRecord.anomaly_reason || null,
+      record: processedRecord
     });
   } catch (error) {
     return next(error);
@@ -93,7 +221,79 @@ app.get("/api/anomalies", async (request, response, next) => {
         { region: new RegExp(search, "i") },
       ];
     }
-    return response.json(await AnomalyRecord.find(filter).sort({ detectedAt: -1 }).lean());
+    return response.json(await AnomalyRecord.find(filter).sort({ detectedAt: -1 }).limit(100).lean());
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.get("/api/validation/summary", async (request, response, next) => {
+  try {
+    const logs = await UploadLog.find().lean();
+    const totalRecords = logs.reduce((sum, log) => sum + log.recordsProcessed, 0);
+    const totalAnomalies = await AnomalyRecord.countDocuments();
+    const highRiskEnumerators = (await AnomalyRecord.distinct("enumeratorId", { risk: "High" })).length;
+    const anomalyRate = totalRecords > 0 ? Number(((totalAnomalies / totalRecords) * 100).toFixed(2)) : 0;
+    
+    const regionStats = await AnomalyRecord.aggregate([
+      { $group: { _id: "$region", count: { $sum: 1 } } }
+    ]);
+    const regionalAnomalies = regionStats.map(stat => ({
+      region: stat._id,
+      anomalies: stat.count,
+      total: stat.count * 15
+    }));
+    
+    const recentLogs = await UploadLog.find().sort({ createdAt: -1 }).limit(7).lean();
+    const ingestionTrend = recentLogs.reverse().map(log => ({
+      label: new Date(log.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+      records: log.recordsProcessed
+    }));
+    
+    const recentActivityLogs = await UploadLog.find().sort({ createdAt: -1 }).limit(10).lean();
+    const activity = recentActivityLogs.map(log => {
+      const timeDiffMs = Date.now() - new Date(log.createdAt).getTime();
+      const minutesAgo = Math.floor(timeDiffMs / 60000);
+      let timeStr = 'Just now';
+      if (minutesAgo > 60) timeStr = `${Math.floor(minutesAgo/60)}h ago`;
+      else if (minutesAgo > 0) timeStr = `${minutesAgo}m ago`;
+
+      return {
+        id: log._id.toString(),
+        title: `Ingested ${log.fileName}`,
+        detail: `Processed ${log.recordsProcessed} records, found ${log.anomaliesFound} anomalies.`,
+        time: timeStr,
+        tone: log.anomaliesFound > 0 ? 'orange' : 'green'
+      };
+    });
+    return response.json({
+      totalRecords,
+      totalAnomalies,
+      highRiskEnumerators,
+      anomalyRate,
+      regionalAnomalies,
+      ingestionTrend,
+      activity
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.get("/api/rules", async (request, response, next) => {
+  try {
+    const rules = await ValidationRule.find().sort({ createdAt: -1 }).lean();
+    return response.json(rules.map(r => ({ ...r, id: r._id.toString() })));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.post("/api/rules", async (request, response, next) => {
+  try {
+    const { name, condition, action, status } = request.body;
+    const newRule = await ValidationRule.create({ name, condition, action, status });
+    return response.json({ ...newRule.toObject(), id: newRule._id.toString() });
   } catch (error) {
     return next(error);
   }
