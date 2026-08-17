@@ -22,6 +22,24 @@ function parseCsv(csvContent) {
   });
 }
 
+function calculateRiskAndScore(row) {
+  let score = 0.5;
+  let risk = "Medium";
+  const reason = row.anomaly_reason || "";
+  
+  if (reason.includes("Isolation Forest")) score += 0.3;
+  if (reason.includes("Benford")) score += 0.2;
+  if (Number(row.age) < 18 && Number(row.income) > 0) score += 0.4;
+  
+  score = Math.min(score + (reason.length * 0.005), 0.99);
+  
+  if (score > 0.85) risk = "Critical";
+  else if (score > 0.7) risk = "High";
+  else if (score < 0.4) risk = "Low";
+  
+  return { risk, score };
+}
+
 function toAiRecord(record) {
   return {
     record_id: record.record_id ?? record.recordId,
@@ -58,18 +76,21 @@ app.post("/api/upload", async (request, response, next) => {
     const validatedRows = await aiResponse.json();
     const documents = validatedRows
       .filter((row) => row.is_anomaly)
-      .map((row) => ({
-        recordId: row.record_id,
-        enumeratorId: row.enumerator_id,
-        region: row.region || "Unspecified",
-        age: Number(row.age || 0),
-        income: Number(row.income || 0),
-        education: row.education || "",
-        status: "Flagged",
-        risk: Number(row.age) < 18 && Number(row.income) > 0 ? "High" : "Medium",
-        reason: row.anomaly_reason,
-        score: Number(row.age) < 18 && Number(row.income) > 0 ? 0.96 : 0.82,
-      }));
+      .map((row) => {
+        const { risk, score } = calculateRiskAndScore(row);
+        return {
+          recordId: row.record_id,
+          enumeratorId: row.enumerator_id,
+          region: row.region || "Unspecified",
+          age: Number(row.age || 0),
+          income: Number(row.income || 0),
+          education: row.education || "",
+          status: "Flagged",
+          risk,
+          reason: row.anomaly_reason,
+          score,
+        };
+      });
 
     const saved = await AnomalyRecord.insertMany(documents);
     
@@ -113,18 +134,21 @@ app.post("/api/upload-image", async (request, response, next) => {
     
     const documents = validatedRows
       .filter((row) => row.is_anomaly)
-      .map((row) => ({
-        recordId: row.record_id || "IMG-GEN",
-        enumeratorId: row.enumerator_id || "Unknown",
-        region: row.region || "Unspecified",
-        age: Number(row.age || 0),
-        income: Number(row.income || 0),
-        education: row.education || "",
-        status: "Flagged",
-        risk: row.anomaly_reason?.includes("Isolation Forest") ? "High" : "Medium",
-        reason: row.anomaly_reason,
-        score: Math.min((row.anomaly_reason?.length || 0) * 0.01 + 0.4, 0.98),
-      }));
+      .map((row) => {
+        const { risk, score } = calculateRiskAndScore(row);
+        return {
+          recordId: row.record_id || "IMG-GEN",
+          enumeratorId: row.enumerator_id || "Unknown",
+          region: row.region || "Unspecified",
+          age: Number(row.age || 0),
+          income: Number(row.income || 0),
+          education: row.education || "",
+          status: "Flagged",
+          risk,
+          reason: row.anomaly_reason,
+          score,
+        };
+      });
 
     if (documents.length > 0) {
       await AnomalyRecord.insertMany(documents);
@@ -169,6 +193,7 @@ app.post("/api/ingest", async (request, response, next) => {
     const processedRecord = validatedRows[0];
 
     if (processedRecord && processedRecord.is_anomaly) {
+      const { risk, score } = calculateRiskAndScore(processedRecord);
       const anomalyDoc = {
         recordId: processedRecord.record_id || "Unknown",
         enumeratorId: processedRecord.enumerator_id || "Unknown",
@@ -177,9 +202,9 @@ app.post("/api/ingest", async (request, response, next) => {
         income: Number(processedRecord.income || 0),
         education: processedRecord.education || "",
         status: "Flagged",
-        risk: processedRecord.anomaly_reason?.includes("Isolation Forest") ? "High" : "Medium",
+        risk,
         reason: processedRecord.anomaly_reason,
-        score: Math.min((processedRecord.anomaly_reason?.length || 0) * 0.01 + 0.4, 0.98),
+        score,
       };
       await AnomalyRecord.create(anomalyDoc);
       
@@ -222,6 +247,46 @@ app.get("/api/anomalies", async (request, response, next) => {
       ];
     }
     return response.json(await AnomalyRecord.find(filter).sort({ detectedAt: -1 }).limit(100).lean());
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.patch("/api/anomalies/:id/notify", async (request, response, next) => {
+  try {
+    const anomaly = await AnomalyRecord.findByIdAndUpdate(
+      request.params.id,
+      { notificationStatus: "Notified", notifiedAt: new Date() },
+      { new: true }
+    );
+    if (!anomaly) return response.status(404).json({ error: "Not found" });
+    
+    await UploadLog.create({
+      fileName: `Notified Enumerator for ${anomaly.recordId}`,
+      recordsProcessed: 0, anomaliesFound: 0, highRiskCount: 0
+    });
+    
+    return response.json(anomaly);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.post("/api/anomalies/auto-remove", async (request, response, next) => {
+  try {
+    const result = await AnomalyRecord.updateMany(
+      { notificationStatus: "Notified" },
+      { $set: { notificationStatus: "Auto-Removed", status: "Removed" } }
+    );
+    
+    if (result.modifiedCount > 0) {
+      await UploadLog.create({
+        fileName: `Auto-removed ${result.modifiedCount} ignored anomalies`,
+        recordsProcessed: 0, anomaliesFound: 0, highRiskCount: 0
+      });
+    }
+    
+    return response.json({ message: "Simulated 5 days passed", removed: result.modifiedCount });
   } catch (error) {
     return next(error);
   }

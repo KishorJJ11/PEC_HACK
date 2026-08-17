@@ -6,6 +6,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   BarChart3,
+  Camera,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -31,6 +32,8 @@ import {
   Sparkles,
   UploadCloud,
   X,
+  Lock,
+  User
 } from 'lucide-react';
 import {
   getGetAnomaliesQueryKey,
@@ -68,16 +71,65 @@ const formatCurrency = (value) => new Intl.NumberFormat('en-GB', { style: 'curre
 const formatDate = (value) => new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AppShell />
+        {isAuthenticated ? <AppShell onLogout={() => setIsAuthenticated(false)} /> : <LoginPage onLogin={() => setIsAuthenticated(true)} />}
       </BrowserRouter>
     </QueryClientProvider>
   );
 }
 
-function AppShell() {
+function LoginPage({ onLogin }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (username === 'officer' && password === 'password') {
+      onLogin();
+    } else {
+      setError('Invalid credentials. Use officer / password for demo.');
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#f4f0e9] p-4">
+      <div className="w-full max-w-[400px] rounded-2xl bg-[#fbfaf6] p-8 shadow-2xl">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#d35d45] text-[#fff5e9] shadow-[0_6px_16px_rgba(0,0,0,.16)]">
+            <ShieldCheck size={28} strokeWidth={1.8} />
+          </span>
+          <h1 className="mt-5 text-[22px] font-semibold text-[#273446] tracking-[-0.02em]">Census / Signal</h1>
+          <p className="mono-font mt-1 text-[10px] uppercase tracking-[0.15em] text-[#85877f]">Officer Portal Login</p>
+        </div>
+        
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <div>
+            <label className="mb-1 block text-[12px] font-semibold text-[#35414e]">Username</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-[#85877f]" size={16} />
+              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full rounded-lg border border-[#d8d4cc] bg-[#f4f0e9] py-2 pl-10 pr-3 text-[14px] text-[#273446] focus:border-[#507e9b] focus:outline-none focus:ring-1 focus:ring-[#507e9b]" placeholder="officer" required />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-[12px] font-semibold text-[#35414e]">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[#85877f]" size={16} />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-lg border border-[#d8d4cc] bg-[#f4f0e9] py-2 pl-10 pr-3 text-[14px] text-[#273446] focus:border-[#507e9b] focus:outline-none focus:ring-1 focus:ring-[#507e9b]" placeholder="••••••••" required />
+            </div>
+          </div>
+          {error && <p className="text-[12px] text-[#b74d39] font-medium">{error}</p>}
+          <button type="submit" className="mt-4 rounded-lg bg-[#3e8c6c] py-2.5 text-[14px] font-semibold text-white shadow-md transition hover:bg-[#34785c]">Authenticate</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AppShell({ onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
@@ -127,7 +179,9 @@ function AppShell() {
             <p className="truncate text-[11px] font-semibold text-[#edf2e9]">Amina Malik</p>
             <p className="truncate text-[10px] text-[#dce8de]/45">Quality analyst</p>
           </div>
-          <MoreHorizontal size={15} className="ml-auto text-[#dce8de]/45" />
+          <button onClick={onLogout} className="ml-auto rounded p-1 text-[#dce8de]/45 transition hover:bg-[#dce8de]/10 hover:text-white" title="Log out">
+            <X size={15} />
+          </button>
         </div>
       </aside>
 
@@ -322,16 +376,17 @@ function SignalCard({ onOpen }) {
 }
 
 function UploadPage() {
-  const navigate = useNavigate();
-  const uploadMutation = useUploadSurvey();
-  const queryClientRef = useQueryClient();
   const [file, setFile] = useState(null);
   const [csvContent, setCsvContent] = useState('');
   const [imageBase64, setImageBase64] = useState('');
   const [mimeType, setMimeType] = useState('');
+  const [activeTab, setActiveTab] = useState('csv');
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [message, setMessage] = useState('');
+  const uploadMutation = useUploadSurvey();
+  const queryClientRef = useQueryClient();
+  const navigate = useNavigate();
 
   const readFile = (selected) => {
     if (!selected) return;
@@ -425,30 +480,67 @@ function UploadPage() {
     });
   };
 
-  return <main className="content-wrap page-enter"><section><div className="eyebrow flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#d35d45]" /> Ingestion workspace</div><h1 className="display-font mt-3 text-[clamp(2.7rem,5vw,4.3rem)] leading-[.94] tracking-[-.03em]">Bring in the<br /><em className="text-[#b74d39]">next signal.</em></h1><p className="mt-5 max-w-[34rem] text-[14px] leading-relaxed text-[#72756e]">Upload a survey extract and we will run the active hard checks, cohort comparisons, and enumerator consistency tests in one pass.</p></section>
-    <form onSubmit={submit} className="mt-10 grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
+  return <main className="content-wrap page-enter"><section><div className="eyebrow flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#d35d45]" /> Ingestion workspace</div><h1 className="display-font mt-3 text-[clamp(2.7rem,5vw,4.3rem)] leading-[.94] tracking-[-.03em]">Bring in the<br /><em className="text-[#b74d39]">next signal.</em></h1><p className="mt-5 max-w-[34rem] text-[14px] leading-relaxed text-[#72756e]">Upload a survey extract or scan a physical paper survey, and we will run the active hard checks, cohort comparisons, and enumerator consistency tests in one pass.</p></section>
+    
+    <div className="mt-8 flex gap-2 border-b border-[#ded9d0]">
+      <button onClick={() => setActiveTab('csv')} className={`px-4 py-2 text-[13px] font-semibold transition border-b-2 ${activeTab === 'csv' ? 'border-[#b74d39] text-[#b74d39]' : 'border-transparent text-[#72756e] hover:text-[#273446]'}`}>Data Extract (CSV)</button>
+      <button onClick={() => setActiveTab('scan')} className={`px-4 py-2 text-[13px] font-semibold transition border-b-2 ${activeTab === 'scan' ? 'border-[#b74d39] text-[#b74d39]' : 'border-transparent text-[#72756e] hover:text-[#273446]'}`}>Scan Paper Survey (OCR)</button>
+    </div>
+
+    <form onSubmit={submit} className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
       <div className="surface rounded-xl p-5 sm:p-8">
-        <div className="flex items-center justify-between"><div><p className="eyebrow">01 / Source file</p><h2 className="mt-2 text-[17px] font-semibold">Select a CSV extract</h2></div><FileSpreadsheet className="text-[#4b8d84]" size={22} /></div>
-        <label htmlFor="survey-file" className={`mt-7 flex min-h-[238px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-5 text-center transition ${file ? 'border-[#4b8d84] bg-[#e5f0ea]' : 'border-[#cfc9bf] bg-[#faf8f3] hover:border-[#b74d39] hover:bg-[#fbf2eb]'}`} data-testid="dropzone-survey-file"><input id="survey-file" type="file" accept=".csv,text/csv,image/jpeg,image/png,image/jpg" capture="environment" className="sr-only" onChange={(event) => readFile(event.target.files?.[0])} data-testid="input-survey-file" />{file ? <><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#cce5d8] text-[#30735f]"><FileCheck2 size={22} /></span><p className="mt-4 text-[13px] font-semibold text-[#315c52]">{file.name}</p><p className="mono-font mt-1 text-[10px] text-[#609083]">{formatNumber(file.size)} bytes · Ready to validate</p><span className="mt-4 text-[11px] font-semibold text-[#b74d39]">Choose a different file</span></> : <><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f0ddd5] text-[#b74d39]"><UploadCloud size={22} /></span><p className="mt-4 text-[13px] font-semibold text-[#35414e]">Drop a CSV or image here, or browse files</p><p className="mt-1 text-[11px] text-[#85877f]">CSV, JPEG, PNG · Take a photo on mobile</p></>}</label>
-        {!file && <div className="mt-4 flex flex-col gap-3 sm:flex-row"><button type="button" onClick={useSample} className="flex items-center gap-2 text-[11px] font-semibold text-[#b74d39] transition hover:text-[#8c392a]" data-testid="button-use-sample"><Sparkles size={13} /> Use a sample extract to explore</button><button type="button" onClick={async () => {
-          setMessage('Pinging real-time API...');
-          try {
-            const res = await fetch('http://127.0.0.1:5000/api/ingest', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ record_id: `RT-${Date.now()}`, enumerator_id: 'ENUM-RT', region: 'North', age: 14, income: 50000, education: 'PhD', employment_status: 'employed' })
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-              setMessage(`Real-time ping successful! Record flagged: ${data.is_anomaly}. Reason: ${data.reason}`);
-              queryClientRef.invalidateQueries({ queryKey: getGetValidationSummaryQueryKey() });
-            } else {
-              setMessage('Real-time ping failed.');
-            }
-          } catch(e) {
-             setMessage('Error contacting real-time API.');
-          }
-        }} className="flex items-center gap-2 text-[11px] font-semibold text-[#3b806d] transition hover:text-[#2c6152]"><Activity size={13} /> Simulate Real-Time Stream (Single Record)</button></div>}
+        
+        {activeTab === 'csv' && (
+          <>
+            <div className="flex items-center justify-between"><div><p className="eyebrow">01 / Source file</p><h2 className="mt-2 text-[17px] font-semibold">Select a CSV extract</h2></div><FileSpreadsheet className="text-[#4b8d84]" size={22} /></div>
+            <label htmlFor="survey-file-csv" className={`mt-7 flex min-h-[238px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-5 text-center transition ${file && !imageBase64 ? 'border-[#4b8d84] bg-[#e5f0ea]' : 'border-[#cfc9bf] bg-[#faf8f3] hover:border-[#b74d39] hover:bg-[#fbf2eb]'}`} data-testid="dropzone-survey-file">
+              <input id="survey-file-csv" type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => readFile(event.target.files?.[0])} />
+              {file && !imageBase64 ? <><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#cce5d8] text-[#30735f]"><FileCheck2 size={22} /></span><p className="mt-4 text-[13px] font-semibold text-[#315c52]">{file.name}</p><p className="mono-font mt-1 text-[10px] text-[#609083]">{formatNumber(file.size)} bytes · Ready to validate</p><span className="mt-4 text-[11px] font-semibold text-[#b74d39]">Choose a different file</span></> : <><span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f0ddd5] text-[#b74d39]"><UploadCloud size={22} /></span><p className="mt-4 text-[13px] font-semibold text-[#35414e]">Drop a CSV here, or browse files</p></>}
+            </label>
+            {!file && <div className="mt-4 flex flex-col gap-3 sm:flex-row"><button type="button" onClick={useSample} className="flex items-center gap-2 text-[11px] font-semibold text-[#b74d39] transition hover:text-[#8c392a]"><Sparkles size={13} /> Use a sample extract to explore</button><button type="button" onClick={async () => {
+              setMessage('Pinging real-time API...');
+              try {
+                const res = await fetch('http://127.0.0.1:5000/api/ingest', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ record_id: `RT-${Date.now()}`, enumerator_id: 'ENUM-RT', region: 'North', age: 14, income: 50000, education: 'PhD', employment_status: 'employed' })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                  setMessage(`Real-time ping successful! Record flagged: ${data.is_anomaly}. Reason: ${data.reason}`);
+                  queryClientRef.invalidateQueries({ queryKey: getGetValidationSummaryQueryKey() });
+                } else setMessage('Real-time ping failed.');
+              } catch(e) { setMessage('Error contacting real-time API.'); }
+            }} className="flex items-center gap-2 text-[11px] font-semibold text-[#3b806d] transition hover:text-[#2c6152]"><Activity size={13} /> Simulate Real-Time Stream (Single Record)</button></div>}
+          </>
+        )}
+
+        {activeTab === 'scan' && (
+          <>
+            <div className="flex items-center justify-between"><div><p className="eyebrow">01 / Scan paper survey</p><h2 className="mt-2 text-[17px] font-semibold">Capture Physical Form</h2></div><Camera className="text-[#4b8d84]" size={22} /></div>
+            <label htmlFor="survey-file-scan" className={`mt-7 relative flex min-h-[238px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-5 text-center overflow-hidden transition ${file && imageBase64 ? 'border-[#4b8d84] bg-[#000]' : 'border-[#cfc9bf] bg-[#faf8f3] hover:border-[#b74d39] hover:bg-[#fbf2eb]'}`}>
+              <input id="survey-file-scan" type="file" accept="image/jpeg,image/png,image/jpg" capture="environment" className="sr-only" onChange={(event) => readFile(event.target.files?.[0])} />
+              
+              {file && imageBase64 ? (
+                <>
+                  <img src={`data:${mimeType};base64,${imageBase64}`} className="absolute inset-0 w-full h-full object-cover opacity-60" alt="Scanned Document" />
+                  <div className="relative z-10 flex flex-col items-center">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#cce5d8] text-[#30735f]"><CheckCircle2 size={22} /></span>
+                    <p className="mt-4 text-[13px] font-semibold text-[#fff] shadow-sm">{file.name}</p>
+                    <span className="mt-2 rounded bg-black/50 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur">Retake Photo</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f0ddd5] text-[#b74d39] shadow-md"><Camera size={26} /></span>
+                  <p className="mt-4 text-[14px] font-semibold text-[#35414e]">Tap to scan with camera</p>
+                  <p className="mt-1 text-[11px] text-[#85877f]">Hold device steady over the paper survey.</p>
+                </>
+              )}
+            </label>
+          </>
+        )}
+
       </div>
       <div className="surface flex flex-col rounded-xl p-5 sm:p-8">
         <div><p className="eyebrow">02 / Validation pass</p><h2 className="mt-2 text-[17px] font-semibold">Run quality checks</h2><p className="mt-2 text-[12px] leading-relaxed text-[#85877f]">Every upload is checked against the active rule set and compared with the current regional baseline.</p></div>
@@ -512,8 +604,8 @@ function AnomaliesPage() {
     document.body.removeChild(link);
   };
 
-  return <main className="content-wrap page-enter"><section className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><div className="eyebrow flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#d35d45]" /> Explainable review</div><h1 className="display-font mt-3 text-[clamp(2.65rem,5vw,4.25rem)] leading-[.94] tracking-[-.03em]">Follow the<br /><em className="text-[#b74d39]">evidence.</em></h1><p className="mt-5 max-w-[35rem] text-[14px] leading-relaxed text-[#72756e]">Each flagged record carries a reason, a confidence score, and the context needed to make a defensible decision.</p></div><div className="flex items-center gap-2"><span className="mono-font rounded-full bg-[#f0ddd5] px-3 py-2 text-[10px] text-[#9e4d3b]">{formatNumber(rows.length)} visible records</span><button onClick={exportToCSV} className="flex items-center gap-2 rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-3 py-2.5 text-[11px] font-semibold text-[#42515a] transition hover:border-[#b74d39]" data-testid="button-export-anomalies"><Download size={14} /> Export</button></div></section>
-    <section className="surface mt-10 overflow-hidden rounded-xl"><div className="flex flex-col gap-3 border-b border-[#e3ded6] p-4 sm:flex-row sm:items-center sm:justify-between"><div className="relative flex-1 sm:max-w-[24rem]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#92948c]" /><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search record, enumerator, region…" className="h-10 w-full rounded-lg border border-[#d7d1c8] bg-[#fbfaf6] pl-9 pr-3 text-[12px] outline-none transition placeholder:text-[#9b9b93] focus:border-[#b74d39] focus:ring-2 focus:ring-[#d35d45]/10" data-testid="input-anomaly-search" /></div><div className="flex items-center gap-2"><Filter size={14} className="text-[#85877f]" /><span className="mono-font text-[9px] uppercase tracking-[.1em] text-[#85877f]">Risk</span>{['All', 'High', 'Medium', 'Low'].map((value) => <button key={value} onClick={() => setRisk(value)} className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition ${risk === value ? 'bg-[#273446] text-[#f4f0e9]' : 'text-[#74766f] hover:bg-[#eeeae3]'}`} data-testid={`button-filter-risk-${value.toLowerCase()}`}>{value}</button>)}</div></div>
+  return <main className="content-wrap page-enter"><section className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><div className="eyebrow flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#d35d45]" /> Explainable review</div><h1 className="display-font mt-3 text-[clamp(2.65rem,5vw,4.25rem)] leading-[.94] tracking-[-.03em]">Follow the<br /><em className="text-[#b74d39]">evidence.</em></h1><p className="mt-5 max-w-[35rem] text-[14px] leading-relaxed text-[#72756e]">Each flagged record carries a reason, a confidence score, and the context needed to make a defensible decision.</p></div><div className="flex items-center gap-2"><span className="mono-font rounded-full bg-[#f0ddd5] px-3 py-2 text-[10px] text-[#9e4d3b]">{formatNumber(rows.length)} visible records</span><button onClick={async () => { await fetch('http://127.0.0.1:5000/api/anomalies/auto-remove', { method: 'POST' }); window.alert('5 days simulated. Unresponsive records removed.'); window.location.reload(); }} className="flex items-center gap-2 rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-3 py-2.5 text-[11px] font-semibold text-[#8c392a] transition hover:border-[#b74d39] hover:bg-[#fbf5ed]" data-testid="button-simulate-time"><Clock3 size={14} /> Simulate 5 Days</button><button onClick={exportToCSV} className="flex items-center gap-2 rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-3 py-2.5 text-[11px] font-semibold text-[#42515a] transition hover:border-[#b74d39]" data-testid="button-export-anomalies"><Download size={14} /> Export</button></div></section>
+    <section className="surface mt-10 overflow-hidden rounded-xl"><div className="flex flex-col gap-3 border-b border-[#e3ded6] p-4 sm:flex-row sm:items-center sm:justify-between"><div className="relative flex-1 sm:max-w-[24rem]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#92948c]" /><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search record, enumerator, region…" className="h-10 w-full rounded-lg border border-[#d7d1c8] bg-[#fbfaf6] pl-9 pr-3 text-[12px] outline-none transition placeholder:text-[#9b9b93] focus:border-[#b74d39] focus:ring-2 focus:ring-[#d35d45]/10" data-testid="input-anomaly-search" /></div><div className="flex items-center gap-2"><Filter size={14} className="text-[#85877f]" /><span className="mono-font text-[9px] uppercase tracking-[.1em] text-[#85877f]">Risk</span>{['All', 'Critical', 'High', 'Medium', 'Low'].map((value) => <button key={value} onClick={() => setRisk(value)} className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition ${risk === value ? 'bg-[#273446] text-[#f4f0e9]' : 'text-[#74766f] hover:bg-[#eeeae3]'}`} data-testid={`button-filter-risk-${value.toLowerCase()}`}>{value}</button>)}</div></div>
       {anomalyQuery.isLoading && !anomalyQuery.data ? <TableSkeleton /> : rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left"><thead className="bg-[#f5f1ea]"><tr className="mono-font text-[9px] uppercase tracking-[.1em] text-[#878980]"><th className="px-5 py-3 font-normal">Record / enumerator</th><th className="px-4 py-3 font-normal">Region</th><th className="px-4 py-3 font-normal">Profile</th><th className="px-4 py-3 font-normal">Reason</th><th className="px-4 py-3 font-normal">Risk</th><th className="px-4 py-3 font-normal">Score</th><th className="px-4 py-3 font-normal" /></tr></thead><tbody className="divide-y divide-[#ebe6df]">{rows.map((row) => <AnomalyRow key={row.id} row={row} onSelect={setSelected} />)}</tbody></table></div> : <EmptyAnomalies onClear={() => { setSearch(''); setRisk('All'); }} />}
       <div className="flex items-center justify-between border-t border-[#e3ded6] px-5 py-3"><span className="text-[10px] text-[#92938c]">{isDemo ? 'Illustrative records shown while the service connects' : 'Live records from validation service'}</span><span className="mono-font text-[9px] uppercase tracking-[.1em] text-[#a09e96]">Click a row for explanation</span></div>
     </section>
@@ -522,7 +614,7 @@ function AnomaliesPage() {
 }
 
 function AnomalyRow({ row, onSelect }) {
-  const riskStyle = { High: 'bg-[#f4ddd7] text-[#a64432]', Medium: 'bg-[#f7ebcf] text-[#936d22]', Low: 'bg-[#deede6] text-[#39725f]' };
+  const riskStyle = { Critical: 'bg-[#991b1b] text-[#f4f0e9]', High: 'bg-[#f4ddd7] text-[#a64432]', Medium: 'bg-[#f7ebcf] text-[#936d22]', Low: 'bg-[#deede6] text-[#39725f]' };
   return <tr className="group cursor-pointer transition hover:bg-[#fbf5ed]" onClick={() => onSelect(row)} data-testid={`row-anomaly-${row.id}`}><td className="px-5 py-4"><p className="mono-font text-[11px] font-bold text-[#35414e]">{row.recordId}</p><p className="mt-1 text-[10px] text-[#96968e]">{row.enumeratorId}</p></td><td className="px-4 py-4 text-[11px] text-[#5e696d]">{row.region}</td><td className="px-4 py-4"><p className="text-[11px] text-[#5e696d]">{row.age} years · {row.education || 'Not stated'}</p><p className="mono-font mt-1 text-[10px] text-[#7c8078]">{formatCurrency(row.income)}</p></td><td className="max-w-[260px] px-4 py-4"><p className="line-clamp-2 text-[11px] leading-relaxed text-[#666e6f]">{row.reason}</p></td><td className="px-4 py-4"><span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[.06em] ${riskStyle[row.risk] || riskStyle.Low}`}>{row.risk}</span></td><td className="px-4 py-4"><span className="mono-font text-[11px] font-bold text-[#35414e]">{Math.round(Number(row.score || 0) * 100)}%</span></td><td className="px-4 py-4 text-[#9a9a92] transition group-hover:text-[#b74d39]"><ChevronRight size={15} /></td></tr>;
 }
 
@@ -535,12 +627,35 @@ function EmptyAnomalies({ onClear }) {
 }
 
 function AnomalyModal({ row, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(row.notificationStatus || 'Pending');
+
   useEffect(() => {
     const close = (event) => event.key === 'Escape' && onClose();
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, [onClose]);
-  return <div className="modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-[#172338]/40 p-0 sm:items-center sm:p-6" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><article className="modal-card max-h-[92dvh] w-full max-w-[620px] overflow-y-auto rounded-t-2xl bg-[#fbfaf6] p-5 shadow-2xl sm:rounded-2xl sm:p-7" role="dialog" aria-modal="true" aria-label="Anomaly record detail"><div className="flex items-start justify-between"><div><span className="eyebrow text-[#b74d39]">Record explanation</span><h2 className="mono-font mt-2 text-[19px] font-bold text-[#273446]">{row.recordId}</h2><p className="mt-1 text-[11px] text-[#85877f]">Detected {formatDate(row.detectedAt)} · {row.enumeratorId}</p></div><button onClick={onClose} className="rounded-lg p-2 text-[#777a74] transition hover:bg-[#eeeae3]" data-testid="button-close-anomaly-modal" aria-label="Close anomaly details"><X size={18} /></button></div><div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-4"><DetailStat label="Risk" value={row.risk} tone={row.risk === 'High' ? 'text-[#a64432]' : row.risk === 'Medium' ? 'text-[#936d22]' : 'text-[#39725f]'} /><DetailStat label="Confidence" value={`${Math.round(Number(row.score || 0) * 100)}%`} /><DetailStat label="Income" value={formatCurrency(row.income)} /><DetailStat label="Region" value={row.region} /></div><div className="mt-6 rounded-xl border border-[#e4cdbd] bg-[#fbf0e8] p-4"><div className="flex items-center gap-2 text-[#a34e3a]"><CircleAlert size={16} /><span className="eyebrow !text-[#a34e3a]">Why it was flagged</span></div><p className="mt-3 text-[13px] leading-relaxed text-[#66463e]">{row.reason}</p></div><div className="mt-6"><p className="eyebrow">Observed profile</p><div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-4 border-y border-[#e5e0d8] py-4 sm:grid-cols-3"><DetailLine label="Age" value={`${row.age} years`} /><DetailLine label="Education" value={row.education || 'Not stated'} /><DetailLine label="Survey region" value={row.region} /><DetailLine label="Record status" value={row.status} /><DetailLine label="Enumerator" value={row.enumeratorId} /><DetailLine label="Review state" value="Awaiting decision" /></div></div><div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button onClick={onClose} className="rounded-lg border border-[#cbc5bc] px-4 py-2.5 text-[11px] font-semibold text-[#5a646a] transition hover:bg-[#f0ece5]" data-testid="button-dismiss-anomaly">Keep in queue</button><button onClick={() => { onClose(); window.alert('Record marked for follow-up.'); }} className="rounded-lg bg-[#273446] px-4 py-2.5 text-[11px] font-semibold text-[#f4f0e9] transition hover:bg-[#1c2839]" data-testid="button-mark-follow-up">Mark for follow-up</button></div></article></div>;
+
+  const notify = async () => {
+    setLoading(true);
+    try {
+      await fetch(`http://127.0.0.1:5000/api/anomalies/${row._id || row.id}/notify`, { method: 'PATCH' });
+      setStatus('Notified');
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
+  };
+
+  return <div className="modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-[#172338]/40 p-0 sm:items-center sm:p-6" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><article className="modal-card max-h-[92dvh] w-full max-w-[620px] overflow-y-auto rounded-t-2xl bg-[#fbfaf6] p-5 shadow-2xl sm:rounded-2xl sm:p-7" role="dialog" aria-modal="true" aria-label="Anomaly record detail"><div className="flex items-start justify-between"><div><span className="eyebrow text-[#b74d39]">Record explanation</span><h2 className="mono-font mt-2 text-[19px] font-bold text-[#273446]">{row.recordId}</h2><p className="mt-1 text-[11px] text-[#85877f]">Detected {formatDate(row.detectedAt)} · {row.enumeratorId}</p></div><button onClick={onClose} className="rounded-lg p-2 text-[#777a74] transition hover:bg-[#eeeae3]" data-testid="button-close-anomaly-modal" aria-label="Close anomaly details"><X size={18} /></button></div><div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-4"><DetailStat label="Risk" value={row.risk} tone={row.risk === 'Critical' ? 'text-[#991b1b]' : row.risk === 'High' ? 'text-[#a64432]' : row.risk === 'Medium' ? 'text-[#936d22]' : 'text-[#39725f]'} /><DetailStat label="Confidence" value={`${Math.round(Number(row.score || 0) * 100)}%`} /><DetailStat label="Income" value={formatCurrency(row.income)} /><DetailStat label="Region" value={row.region} /></div><div className="mt-6 rounded-xl border border-[#e4cdbd] bg-[#fbf0e8] p-4"><div className="flex items-center gap-2 text-[#a34e3a]"><CircleAlert size={16} /><span className="eyebrow !text-[#a34e3a]">Why it was flagged</span></div><p className="mt-3 text-[13px] leading-relaxed text-[#66463e]">{row.reason}</p></div><div className="mt-6"><p className="eyebrow">Observed profile</p><div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-4 border-y border-[#e5e0d8] py-4 sm:grid-cols-3"><DetailLine label="Age" value={`${row.age} years`} /><DetailLine label="Education" value={row.education || 'Not stated'} /><DetailLine label="Survey region" value={row.region} /><DetailLine label="Record status" value={row.status} /><DetailLine label="Enumerator" value={row.enumeratorId} /><DetailLine label="Notification Status" value={<span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${status === 'Pending' ? 'bg-[#eeeae3] text-[#5a646a]' : status === 'Notified' ? 'bg-[#f7ebcf] text-[#936d22]' : 'bg-[#f4ddd7] text-[#a64432]'}`}>{status}</span>} /></div></div>
+    
+    <div className="mt-6">
+      <p className="eyebrow text-[#35414e]">Historical Comparison: {row.region} Region</p>
+      <p className="mt-1 text-[11px] text-[#85877f]">Income deviation from last year's regional average.</p>
+      <HistoricalComparisonChart row={row} />
+    </div>
+
+    <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button onClick={onClose} className="rounded-lg border border-[#cbc5bc] px-4 py-2.5 text-[11px] font-semibold text-[#5a646a] transition hover:bg-[#f0ece5]" data-testid="button-dismiss-anomaly">Keep in queue</button><button onClick={notify} disabled={status !== 'Pending' || loading} className="rounded-lg bg-[#273446] px-4 py-2.5 text-[11px] font-semibold text-[#f4f0e9] transition hover:bg-[#1c2839] disabled:opacity-50" data-testid="button-mark-follow-up">{loading ? 'Notifying...' : status === 'Notified' ? 'Enumerator Notified' : status === 'Auto-Removed' ? 'Auto-Removed' : 'Notify Enumerator'}</button></div></article></div>;
 }
 
 function DetailStat({ label, value, tone = 'text-[#273446]' }) {
@@ -549,6 +664,31 @@ function DetailStat({ label, value, tone = 'text-[#273446]' }) {
 
 function DetailLine({ label, value }) {
   return <div><p className="eyebrow">{label}</p><p className="mt-1 text-[11px] font-semibold text-[#4c5a62]">{value}</p></div>;
+}
+
+function HistoricalComparisonChart({ row }) {
+  const avgIncome = 42500;
+  const data = [
+    { name: 'Record', Income: row.income },
+    { name: 'Historical Avg', Income: avgIncome }
+  ];
+  return (
+    <div className="h-[120px] w-full mt-4 rounded-lg bg-[#fbfaf6] border border-[#e5e0d8] p-4">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 20, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e0d8" />
+          <XAxis type="number" hide />
+          <YAxis dataKey="name" type="category" width={110} tick={{ fontSize: 11, fill: '#72756e' }} axisLine={false} tickLine={false} />
+          <Tooltip formatter={(value) => formatCurrency(value)} cursor={{ fill: 'rgba(44, 69, 77, .05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '11px' }} />
+          <Bar dataKey="Income" radius={[0, 4, 4, 0]} barSize={16}>
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={index === 0 ? '#b74d39' : '#8bc9ab'} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 function RulesPage() {
