@@ -119,6 +119,8 @@ function LoginPage({ onLogin }) {
   const [isBiometricScanning, setIsBiometricScanning] = useState(false);
   const [error, setError] = useState('');
 
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
   const roles = [
     { id: 'officer', label: 'Field Officer', code: 'SEC-LVL-1', desc: 'Survey ingestion & flag verification' },
     { id: 'auditor', label: 'Lead Auditor', code: 'SEC-LVL-2', desc: 'Anomaly overrides & signoffs' },
@@ -167,6 +169,46 @@ function LoginPage({ onLogin }) {
       {/* Decorative ambient glowing orbs */}
       <div className="absolute top-1/4 -left-28 h-96 w-96 rounded-full bg-[#d35d45]/15 blur-3xl pointer-events-none animate-pulse-glow" />
       <div className="absolute bottom-10 -right-28 h-96 w-96 rounded-full bg-[#3e8c6c]/15 blur-3xl pointer-events-none animate-pulse-glow" style={{ animationDelay: '2s' }} />
+
+      {/* TOP LEFT CORNER: Officer Profile Badge & Avatar */}
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-30">
+        <button
+          type="button"
+          onClick={() => setShowProfileModal(true)}
+          className="group flex items-center gap-3 rounded-2xl border border-[#334155]/90 bg-[#161f30]/90 px-3.5 py-2 shadow-xl backdrop-blur-xl transition hover:border-[#507e9b] hover:bg-[#1e293b] cursor-pointer"
+          title="Click to view Officer Security Profile & Clearance Dossier"
+        >
+          <div className="relative">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-[#e8b06a] to-[#d35d45] text-xs font-bold text-[#161f30] shadow-sm ring-2 ring-white/20">
+              AM
+            </span>
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#5de3aa] ring-2 ring-[#161f30]" />
+          </div>
+          <div className="text-left hidden sm:block">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-white group-hover:text-[#5de3aa] transition">Amina Malik</span>
+              <BadgeCheck size={13} className="text-[#5de3aa]" />
+            </div>
+            <p className="mono-font text-[9px] uppercase tracking-wider text-[#94a3b8]">Lead Quality Officer</p>
+          </div>
+          <span className="mono-font rounded-md bg-[#0f172a] px-2 py-0.5 text-[9px] text-[#e8b06a] border border-[#334155]">
+            PROFILE ↗
+          </span>
+        </button>
+      </div>
+
+      {/* Officer Security Profile Dossier Modal */}
+      {showProfileModal && (
+        <OfficerProfileModal
+          onClose={() => setShowProfileModal(false)}
+          onAutoLogin={() => {
+            setShowProfileModal(false);
+            setUsername('officer');
+            setPassword('password');
+            onLogin();
+          }}
+        />
+      )}
 
       {/* Main Container */}
       <div className="relative z-10 grid w-full max-w-5xl overflow-hidden rounded-3xl border border-[#2d3748]/80 bg-[#161f30]/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] backdrop-blur-2xl lg:grid-cols-12">
@@ -383,6 +425,131 @@ function LoginPage({ onLogin }) {
         </div>
 
       </div>
+    </div>
+  );
+}
+
+// ==========================================
+// OFFICER PROFILE & CLEARANCE DOSSIER MODAL
+// ==========================================
+function OfficerProfileModal({ onClose, onAutoLogin }) {
+  useEffect(() => {
+    const close = (event) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [onClose]);
+
+  return (
+    <div
+      className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 sm:p-6 backdrop-blur-sm"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <article className="modal-card max-h-[92dvh] w-full max-w-[620px] overflow-y-auto rounded-3xl bg-[#161f30] p-6 shadow-2xl sm:p-8 text-[#e2e8f0] border border-[#334155]/80">
+        
+        {/* Top Header Stamp */}
+        <div className="flex items-start justify-between border-b border-[#2d3748] pb-4">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#3e8c6c]/40 bg-[#3e8c6c]/10 px-3 py-0.5 text-[10px] font-semibold text-[#5de3aa]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#5de3aa] animate-ping" />
+              <span className="mono-font uppercase tracking-wider">OFFICIAL SECURITY DOSSIER</span>
+            </div>
+            <h2 className="text-xl font-bold text-white mt-1.5">Officer Security Profile</h2>
+            <p className="text-[11px] text-[#94a3b8]">Office for National Statistics • Census Signal Verification</p>
+          </div>
+          <button onClick={onClose} className="rounded-xl p-2 text-[#94a3b8] hover:bg-[#2d3748] hover:text-white transition cursor-pointer">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Profile Card Hero */}
+        <div className="mt-6 flex flex-col sm:flex-row items-center gap-5 rounded-2xl border border-[#2d3748] bg-[#1a2334] p-5">
+          <div className="relative">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#e8b06a] via-[#d35d45] to-[#c44930] text-2xl font-bold text-white shadow-lg ring-4 ring-[#161f30]">
+              AM
+            </div>
+            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#3e8c6c] text-[11px] text-white ring-2 ring-[#161f30]">
+              <BadgeCheck size={14} />
+            </span>
+          </div>
+
+          <div className="text-center sm:text-left flex-1">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+              <h3 className="text-lg font-bold text-white">Amina Malik</h3>
+              <span className="mono-font rounded-md bg-[#507e9b]/20 px-2 py-0.5 text-[10px] font-semibold text-[#60a5fa] border border-[#507e9b]/40">
+                LEVEL-3 CLEARANCE
+              </span>
+            </div>
+            <p className="text-xs text-[#cbd5e1] mt-0.5">Lead Quality Analyst &amp; Census Validation Officer</p>
+            <div className="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-3 text-[11px] text-[#94a3b8] mono-font">
+              <span>ID: ONS-AUTH-8821-UK</span>
+              <span>•</span>
+              <span className="text-[#5de3aa]">Sector: North / London</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Operational Statistics Grid */}
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="rounded-xl bg-[#0f172a]/60 border border-[#2d3748] p-3 text-center">
+            <span className="mono-font text-base font-bold text-white">10,000+</span>
+            <p className="text-[10px] uppercase tracking-wider text-[#94a3b8] mt-0.5">Surveys Audited</p>
+          </div>
+          <div className="rounded-xl bg-[#0f172a]/60 border border-[#2d3748] p-3 text-center">
+            <span className="mono-font text-base font-bold text-[#5de3aa]">99.8%</span>
+            <p className="text-[10px] uppercase tracking-wider text-[#94a3b8] mt-0.5">Model Accuracy</p>
+          </div>
+          <div className="rounded-xl bg-[#0f172a]/60 border border-[#2d3748] p-3 text-center">
+            <span className="mono-font text-base font-bold text-[#f59e0b]">142 Cases</span>
+            <p className="text-[10px] uppercase tracking-wider text-[#94a3b8] mt-0.5">Signed Off</p>
+          </div>
+          <div className="rounded-xl bg-[#0f172a]/60 border border-[#2d3748] p-3 text-center">
+            <span className="mono-font text-base font-bold text-[#60a5fa]">Zero-Trust</span>
+            <p className="text-[10px] uppercase tracking-wider text-[#94a3b8] mt-0.5">Encrypted</p>
+          </div>
+        </div>
+
+        {/* Officer Clearance Permissions */}
+        <div className="mt-5 space-y-2">
+          <p className="mono-font text-[10px] uppercase tracking-wider text-[#94a3b8]">Granted Operational Permissions</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center gap-2 rounded-xl bg-[#1e293b]/50 border border-[#2d3748] p-2.5 text-[#cbd5e1]">
+              <CheckCheck size={15} className="text-[#5de3aa] shrink-0" />
+              <span>Full CSV &amp; OCR Scan Ingestion</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-[#1e293b]/50 border border-[#2d3748] p-2.5 text-[#cbd5e1]">
+              <CheckCheck size={15} className="text-[#5de3aa] shrink-0" />
+              <span>20+ Neural Constraint Rule Engine</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-[#1e293b]/50 border border-[#2d3748] p-2.5 text-[#cbd5e1]">
+              <CheckCheck size={15} className="text-[#5de3aa] shrink-0" />
+              <span>Field Re-Survey Notification Dispatch</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-[#1e293b]/50 border border-[#2d3748] p-2.5 text-[#cbd5e1]">
+              <CheckCheck size={15} className="text-[#5de3aa] shrink-0" />
+              <span>Parliamentary ONS Audit Certification</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Action Buttons */}
+        <div className="mt-6 flex flex-col-reverse sm:flex-row items-center justify-between border-t border-[#2d3748] pt-4 gap-3">
+          <button
+            onClick={onClose}
+            className="w-full sm:w-auto rounded-xl border border-[#334155] px-4 py-2.5 text-xs font-semibold text-[#94a3b8] hover:bg-[#1e293b] hover:text-white transition cursor-pointer"
+          >
+            Close Dossier
+          </button>
+          
+          <button
+            onClick={onAutoLogin}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#d35d45] to-[#c44930] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:brightness-110 active:scale-95 transition cursor-pointer"
+          >
+            <ShieldCheck size={16} />
+            <span>Login as Officer Amina Malik (Instant)</span>
+          </button>
+        </div>
+
+      </article>
     </div>
   );
 }
