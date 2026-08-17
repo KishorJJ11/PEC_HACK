@@ -41,17 +41,6 @@ def validate_records(records: list[SurveyRecord]) -> list[dict[str, Any]]:
     frame = pd.DataFrame([record.model_dump() for record in records])
     frame["age"] = pd.to_numeric(frame["age"], errors="coerce").fillna(0)
     frame["income"] = pd.to_numeric(frame["income"], errors="coerce").fillna(0)
-    frame["income_log"] = (frame["income"].clip(lower=0) + 1).map(__import__("math").log)
-
-    if len(frame) >= 4:
-        detector = IsolationForest(
-            contamination="auto",
-            random_state=42,
-            n_estimators=100,
-        )
-        frame["model_flag"] = detector.fit_predict(frame[["age", "income_log"]]) == -1
-    else:
-        frame["model_flag"] = False
 
     income_mean = frame["income"].mean()
     income_std = frame["income"].std() or 1
@@ -59,43 +48,49 @@ def validate_records(records: list[SurveyRecord]) -> list[dict[str, Any]]:
 
     for index, row in frame.iterrows():
         reasons: list[str] = []
-        if row["age"] < 16 and row["employment_status"] == "employed":
-            reasons.append("Rule 1: Underage employment detected.")
-        if row["age"] < 60 and row["employment_status"] == "retired":
-            reasons.append("Rule 2: Early retirement age anomaly.")
-        if row["age"] < 0 or row["age"] > 100:
-            reasons.append("Rule 3: Invalid age bounds (0-100).")
-        if row["income"] < 0:
-            reasons.append("Rule 4: Negative income reported.")
-        if row["employment_status"] in ["unemployed", "student"] and row["income"] > 20000:
-            reasons.append("Rule 5: High income reported for non-working status.")
-        if row["employment_status"] == "employed" and row["income"] == 0:
-            reasons.append("Rule 6: Zero income for employed status.")
-        if row["age"] < 14 and row["education"] in ["Degree", "Master", "PhD"]:
-            reasons.append("Rule 7: Higher education conflicts with young age.")
-        if not row["region"] or not row["education"] or not row["employment_status"]:
-            reasons.append("Rule 8: Missing essential survey fields.")
-        if row["income"] > income_mean + (3 * income_std):
-            reasons.append("Rule 9: Income exceeds 3 standard deviations from mean.")
-            
-        # Innovative ML/Stats Rules
-        # Rule A: Benford's Law Check (First Digit)
+        
+        # VR-20: Benford's Law (Fabrication Check)
         if row["income"] >= 10:
             first_digit = int(str(int(row["income"]))[0])
             if first_digit in [8, 9]:
-                reasons.append("Benford's Law: High-end rare leading digit detected. Possible fabrication.")
+                reasons.append("[VR-20] Benford's Law: Rare leading digit detected.")
                 
-        # Rule B: Age Heaping (Terminal Digit Preference)
+        # VR-19: Age Heaping (Terminal Digit)
         if row["age"] >= 20 and (row["age"] % 10 == 0 or row["age"] % 10 == 5):
-            reasons.append("Age Heaping: Vague rounded age detected (ends in 0 or 5).")
+            reasons.append("[VR-19] Age Heaping: Rounded age detected.")
 
-        if row["model_flag"]:
-            reasons.append("Rule 10: Isolation Forest detected multi-variate anomaly.")
+        # VR-17: Cluster Outlier (Z-Score)
+        if row["income"] > income_mean + (3 * income_std):
+            reasons.append("[VR-17] Cluster Outlier: Income exceeds 3 standard deviations.")
+
+        # VR-09: Education vs. Occupation Clash
+        if row["education"] in ["PhD", "Master"] and row["employment_status"] == "unemployed":
+            reasons.append("[VR-09] Education Clash: High education but unemployed.")
+
+        # VR-03: Income vs. Hours Worked Matrix (Proxy)
+        if row["employment_status"] == "unemployed" and row["income"] > 10000:
+            reasons.append("[VR-03] Income Matrix: High income for unemployed status.")
+
+        # VR-01: Age Mismatch / Underage
+        if row["age"] < 16 and row["employment_status"] == "employed":
+            reasons.append("[VR-01] Age Mismatch: Underage employment detected.")
+
+        # VR-18: Straight-Lining / Round Number Fabrication
+        if row["income"] > 0 and row["income"] % 10000 == 0:
+            reasons.append("[VR-18] Fabrication: Suspiciously perfect round number for income.")
+            
+        # VR-08: Demographic Logical Clash (Senior)
+        if row["age"] > 80 and row["employment_status"] == "employed":
+            reasons.append("[VR-08] Demographic Clash: Extreme senior age for active employment.")
+            
+        # VR-06: Industry vs Occupation Clash (Extreme Poverty)
+        if row["employment_status"] == "employed" and row["income"] < 1000:
+            reasons.append("[VR-06] Industry Clash: Employed but reporting near-zero income.")
 
         payload = records[index].model_dump()
         payload.pop("extra", None)
         payload["is_anomaly"] = bool(reasons)
-        payload["anomaly_reason"] = " ".join(reasons) if reasons else ""
+        payload["anomaly_reason"] = " | ".join(reasons) if reasons else ""
         output.append(payload)
 
     return output

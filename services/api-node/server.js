@@ -23,19 +23,29 @@ function parseCsv(csvContent) {
 }
 
 function calculateRiskAndScore(row) {
-  let score = 0.5;
-  let risk = "Medium";
   const reason = row.anomaly_reason || "";
+  if (!reason) return { risk: "Low", score: 0.1 };
+
+  let score = 0.4; // Base score for any flagged record
+
+  // Evaluate rule weights based on the specific rules
+  if (reason.includes("[VR-20]")) score += 0.4; // Benford's Law (Fabrication)
+  if (reason.includes("[VR-17]")) score += 0.3; // Cluster Outlier
+  if (reason.includes("[VR-19]")) score += 0.2; // Age Heaping
+  if (reason.includes("[VR-09]")) score += 0.35; // Education Clash
+  if (reason.includes("[VR-03]")) score += 0.35; // Income Matrix
+  if (reason.includes("[VR-01]")) score += 0.4; // Underage Employment
   
-  if (reason.includes("Isolation Forest")) score += 0.3;
-  if (reason.includes("Benford")) score += 0.2;
-  if (Number(row.age) < 18 && Number(row.income) > 0) score += 0.4;
+  if (reason.includes("[VR-18]")) score += 0.3; // Round Number Fabrication
+  if (reason.includes("[VR-08]")) score += 0.4; // Senior Employment Clash
+  if (reason.includes("[VR-06]")) score += 0.3; // Extreme Poverty Clash
   
-  score = Math.min(score + (reason.length * 0.005), 0.99);
+  score = Math.min(score, 0.99);
   
-  if (score > 0.85) risk = "Critical";
-  else if (score > 0.7) risk = "High";
-  else if (score < 0.4) risk = "Low";
+  let risk = "Medium";
+  if (score >= 0.85) risk = "Critical";
+  else if (score >= 0.70) risk = "High";
+  else if (score < 0.50) risk = "Low";
   
   return { risk, score };
 }
@@ -246,7 +256,7 @@ app.get("/api/anomalies", async (request, response, next) => {
         { region: new RegExp(search, "i") },
       ];
     }
-    return response.json(await AnomalyRecord.find(filter).sort({ detectedAt: -1 }).limit(100).lean());
+    return response.json(await AnomalyRecord.find(filter).sort({ detectedAt: -1 }).lean());
   } catch (error) {
     return next(error);
   }
