@@ -170,19 +170,19 @@ function LoginPage({ onLogin }) {
       <div className="absolute top-1/4 -left-28 h-96 w-96 rounded-full bg-[#d35d45]/15 blur-3xl pointer-events-none animate-pulse-glow" />
       <div className="absolute bottom-10 -right-28 h-96 w-96 rounded-full bg-[#3e8c6c]/15 blur-3xl pointer-events-none animate-pulse-glow" style={{ animationDelay: '2s' }} />
 
-      {/* TOP LEFT CORNER: Officer Profile Badge & Avatar */}
+      {/* TOP LEFT CORNER: Officer Profile Badge & Avatar (Square Shape) */}
       <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-30">
         <button
           type="button"
           onClick={() => setShowProfileModal(true)}
-          className="group flex items-center gap-3 rounded-2xl border border-[#334155]/90 bg-[#161f30]/90 px-3.5 py-2 shadow-xl backdrop-blur-xl transition hover:border-[#507e9b] hover:bg-[#1e293b] cursor-pointer"
+          className="group flex items-center gap-3 rounded-xl border border-[#334155]/90 bg-[#161f30]/95 px-3.5 py-2 shadow-xl backdrop-blur-xl transition hover:border-[#507e9b] hover:bg-[#1e293b] cursor-pointer"
           title="Click to view Officer Security Profile & Clearance Dossier"
         >
           <div className="relative">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-[#e8b06a] to-[#d35d45] text-xs font-bold text-[#161f30] shadow-sm ring-2 ring-white/20">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-tr from-[#e8b06a] to-[#d35d45] text-xs font-bold text-[#161f30] shadow-sm ring-2 ring-white/20">
               AM
             </span>
-            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#5de3aa] ring-2 ring-[#161f30]" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-xs bg-[#5de3aa] ring-2 ring-[#161f30]" />
           </div>
           <div className="text-left hidden sm:block">
             <div className="flex items-center gap-1.5">
@@ -464,10 +464,10 @@ function OfficerProfileModal({ onClose, onAutoLogin }) {
         {/* Profile Card Hero */}
         <div className="mt-6 flex flex-col sm:flex-row items-center gap-5 rounded-2xl border border-[#2d3748] bg-[#1a2334] p-5">
           <div className="relative">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#e8b06a] via-[#d35d45] to-[#c44930] text-2xl font-bold text-white shadow-lg ring-4 ring-[#161f30]">
+            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-gradient-to-tr from-[#e8b06a] via-[#d35d45] to-[#c44930] text-2xl font-bold text-white shadow-lg ring-4 ring-[#161f30]">
               AM
             </div>
-            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#3e8c6c] text-[11px] text-white ring-2 ring-[#161f30]">
+            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-md bg-[#3e8c6c] text-[11px] text-white ring-2 ring-[#161f30]">
               <BadgeCheck size={14} />
             </span>
           </div>
