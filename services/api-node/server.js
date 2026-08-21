@@ -28,17 +28,33 @@ function calculateRiskAndScore(row) {
 
   let score = 0.4; // Base score for any flagged record
 
-  // Evaluate rule weights based on the specific rules
-  if (reason.includes("[VR-20]")) score += 0.4; // Benford's Law (Fabrication)
-  if (reason.includes("[VR-17]")) score += 0.3; // Cluster Outlier
-  if (reason.includes("[VR-19]")) score += 0.2; // Age Heaping
-  if (reason.includes("[VR-09]")) score += 0.35; // Education Clash
-  if (reason.includes("[VR-03]")) score += 0.35; // Income Matrix
-  if (reason.includes("[VR-01]")) score += 0.4; // Underage Employment
-  
-  if (reason.includes("[VR-18]")) score += 0.3; // Round Number Fabrication
-  if (reason.includes("[VR-08]")) score += 0.4; // Senior Employment Clash
-  if (reason.includes("[VR-06]")) score += 0.3; // Extreme Poverty Clash
+  // Category 1: Probabilistic
+  if (reason.includes("[VR-20]")) score += 0.4;
+  if (reason.includes("[VR-19]")) score += 0.2;
+  if (reason.includes("[VR-18]")) score += 0.3;
+  if (reason.includes("[VR-17]")) score += 0.3;
+  if (reason.includes("[VR-16]")) score += 0.4;
+
+  // Category 2: Enumerator Bias
+  if (reason.includes("[VR-15]")) score += 0.5; // Speed-Running
+  if (reason.includes("[VR-14]")) score += 0.5; // Perfect Batch
+  if (reason.includes("[VR-13]")) score += 0.3; // Midnight Submission
+  if (reason.includes("[VR-12]")) score += 0.4; // Repetitive
+  if (reason.includes("[VR-11]")) score += 0.3; // GPS Mismatch
+
+  // Category 3: Contextual
+  if (reason.includes("[VR-10]")) score += 0.3;
+  if (reason.includes("[VR-09]")) score += 0.2;
+  if (reason.includes("[VR-08]")) score += 0.4;
+  if (reason.includes("[VR-07]")) score += 0.3;
+  if (reason.includes("[VR-06]")) score += 0.3;
+
+  // Category 4: Distributional
+  if (reason.includes("[VR-05]")) score += 0.4; // Ghost Demo
+  if (reason.includes("[VR-04]")) score += 0.4; // Saturation
+  if (reason.includes("[VR-03]")) score += 0.3;
+  if (reason.includes("[VR-02]")) score += 0.4; // Super Human
+  if (reason.includes("[VR-01]")) score += 0.4; // Spouse Mismatch
   
   score = Math.min(score, 0.99);
   
@@ -59,6 +75,19 @@ function toAiRecord(record) {
     income: Number(record.income ?? record.annual_income ?? 0),
     education: record.education ?? "",
     employment_status: record.employment_status ?? record.status ?? "",
+    years_experience: Number(record.years_experience ?? 0),
+    household_size: Number(record.household_size ?? 1),
+    monthly_expenses: Number(record.monthly_expenses ?? 0),
+    work_hours: Number(record.work_hours ?? 0),
+    gender: record.gender ?? "Unknown",
+    maternity_leave: Boolean(record.maternity_leave ?? false),
+    industry: record.industry ?? "",
+    occupation: record.occupation ?? "",
+    submission_time: record.submission_time ?? new Date().toISOString(),
+    gps_location: record.gps_location ?? "",
+    pin_code: String(record.pin_code ?? ""),
+    family_members: Number(record.family_members ?? 1),
+    extra: record.extra ?? {}
   };
 }
 
@@ -95,6 +124,18 @@ app.post("/api/upload", async (request, response, next) => {
           age: Number(row.age || 0),
           income: Number(row.income || 0),
           education: row.education || "",
+          years_experience: Number(row.years_experience || 0),
+          household_size: Number(row.household_size || 1),
+          monthly_expenses: Number(row.monthly_expenses || 0),
+          work_hours: Number(row.work_hours || 0),
+          gender: row.gender || "Unknown",
+          maternity_leave: Boolean(row.maternity_leave || false),
+          industry: row.industry || "",
+          occupation: row.occupation || "",
+          submission_time: row.submission_time ? new Date(row.submission_time) : new Date(),
+          gps_location: row.gps_location || "",
+          pin_code: row.pin_code || "",
+          family_members: Number(row.family_members || 1),
           status: "Flagged",
           risk,
           reason: row.anomaly_reason,
@@ -153,6 +194,18 @@ app.post("/api/upload-image", async (request, response, next) => {
           age: Number(row.age || 0),
           income: Number(row.income || 0),
           education: row.education || "",
+          years_experience: Number(row.years_experience || 0),
+          household_size: Number(row.household_size || 1),
+          monthly_expenses: Number(row.monthly_expenses || 0),
+          work_hours: Number(row.work_hours || 0),
+          gender: row.gender || "Unknown",
+          maternity_leave: Boolean(row.maternity_leave || false),
+          industry: row.industry || "",
+          occupation: row.occupation || "",
+          submission_time: row.submission_time ? new Date(row.submission_time) : new Date(),
+          gps_location: row.gps_location || "",
+          pin_code: row.pin_code || "",
+          family_members: Number(row.family_members || 1),
           status: "Flagged",
           risk,
           reason: row.anomaly_reason,
@@ -256,7 +309,32 @@ app.get("/api/anomalies", async (request, response, next) => {
         { region: new RegExp(search, "i") },
       ];
     }
-    return response.json(await AnomalyRecord.find(filter).sort({ detectedAt: -1 }).lean());
+    const anomalies = await AnomalyRecord.find(filter).sort({ detectedAt: -1 }).lean();
+    const result = anomalies.map(a => ({
+      id: a._id.toString(),
+      recordId: a.recordId,
+      enumeratorId: a.enumeratorId,
+      region: a.region,
+      age: a.age,
+      income: a.income,
+      education: a.education,
+      gender: a.gender,
+      maternity_leave: a.maternity_leave,
+      industry: a.industry,
+      occupation: a.occupation,
+      years_experience: a.years_experience,
+      work_hours: a.work_hours,
+      household_size: a.household_size,
+      monthly_expenses: a.monthly_expenses,
+      gps_location: a.gps_location,
+      pin_code: a.pin_code,
+      status: a.status,
+      risk: a.risk,
+      reason: a.reason,
+      detectedAt: a.detectedAt,
+      score: a.score
+    }));
+    return response.json(result);
   } catch (error) {
     return next(error);
   }
@@ -369,6 +447,30 @@ app.post("/api/rules", async (request, response, next) => {
     const { name, condition, action, status } = request.body;
     const newRule = await ValidationRule.create({ name, condition, action, status });
     return response.json({ ...newRule.toObject(), id: newRule._id.toString() });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.post("/api/chat", async (request, response, next) => {
+  try {
+    const { message } = request.body;
+    if (!message) {
+      return response.status(400).json({ error: "message is required" });
+    }
+
+    const aiResponse = await fetch(`${aiServiceUrl}/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+
+    if (!aiResponse.ok) {
+      return response.status(502).json({ error: "AI validation service unavailable for chat" });
+    }
+
+    const result = await aiResponse.json();
+    return response.json(result);
   } catch (error) {
     return next(error);
   }

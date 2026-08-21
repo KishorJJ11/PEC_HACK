@@ -111,26 +111,13 @@ function App() {
 }
 
 function LoginPage({ onLogin }) {
-  const [username, setUsername] = useState('officer');
-  const [password, setPassword] = useState('password');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('officer');
   const [isLoading, setIsLoading] = useState(false);
-  const [isBiometricScanning, setIsBiometricScanning] = useState(false);
   const [error, setError] = useState('');
 
-  const roles = [
-    { id: 'officer', label: 'Field Officer', code: 'SEC-LVL-1', desc: 'Survey ingestion & flag verification' },
-    { id: 'auditor', label: 'Lead Auditor', code: 'SEC-LVL-2', desc: 'Anomaly overrides & signoffs' },
-    { id: 'engineer', label: 'Data Architect', code: 'SEC-LVL-3', desc: 'Rule configurations & model metrics' },
-  ];
 
-  const handleRoleSelect = (roleId) => {
-    setSelectedRole(roleId);
-    setUsername('officer');
-    setPassword('password');
-    setError('');
-  };
 
   const handleLogin = (e) => {
     if (e) e.preventDefault();
@@ -138,24 +125,20 @@ function LoginPage({ onLogin }) {
     setIsLoading(true);
 
     setTimeout(() => {
-      if ((username === 'officer' || username === 'admin' || username === 'auditor') && password === 'password') {
+      const isValidOfficer = username === 'officer' && password === 'officer123';
+      const isValidAuditor = username === 'auditor' && password === 'auditor123';
+      const isValidEngineer = username === 'engineer' && password === 'engineer123';
+
+      if (isValidOfficer || isValidAuditor || isValidEngineer) {
         setIsLoading(false);
         onLogin();
       } else {
         setIsLoading(false);
-        setError('Invalid credentials. Use demo credentials (officer / password).');
+        setError('Invalid credentials. Please check your username and password.');
       }
     }, 700);
   };
 
-  const handleBiometricAuth = () => {
-    setIsBiometricScanning(true);
-    setError('');
-    setTimeout(() => {
-      setIsBiometricScanning(false);
-      onLogin();
-    }, 1100);
-  };
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#111622] text-[#e2e8f0] p-4 sm:p-6 lg:p-10">
@@ -221,23 +204,7 @@ function LoginPage({ onLogin }) {
             </div>
           </div>
 
-          {/* Bottom Live Metrics Bar */}
-          <div className="mt-8 pt-6 border-t border-[#2d3748]/60">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg bg-[#111827]/60 p-2.5">
-                <div className="mono-font text-xs font-bold text-[#5de3aa]">99.8%</div>
-                <div className="text-[9px] uppercase tracking-wider text-[#64748b]">Accuracy</div>
-              </div>
-              <div className="rounded-lg bg-[#111827]/60 p-2.5">
-                <div className="mono-font text-xs font-bold text-[#f59e0b]">&lt; 1.2s</div>
-                <div className="text-[9px] uppercase tracking-wider text-[#64748b]">Latency</div>
-              </div>
-              <div className="rounded-lg bg-[#111827]/60 p-2.5">
-                <div className="mono-font text-xs font-bold text-[#60a5fa]">Zero-Trust</div>
-                <div className="text-[9px] uppercase tracking-wider text-[#64748b]">Audit Ready</div>
-              </div>
-            </div>
-          </div>
+
         </div>
 
         {/* Right Authentication Form Section */}
@@ -253,34 +220,13 @@ function LoginPage({ onLogin }) {
               </span>
             </div>
 
-            {/* Quick Demo Role Selector */}
-            <div className="mt-5">
-              <label className="mono-font mb-2 block text-[10px] uppercase tracking-wider text-[#94a3b8]">Quick-Access Role Profile</label>
-              <div className="grid grid-cols-3 gap-2">
-                {roles.map((role) => (
-                  <button
-                    key={role.id}
-                    type="button"
-                    onClick={() => handleRoleSelect(role.id)}
-                    className={`flex flex-col items-start rounded-xl border p-2.5 text-left transition ${
-                      selectedRole === role.id
-                        ? 'border-[#507e9b] bg-[#507e9b]/15 text-white shadow-sm ring-1 ring-[#507e9b]'
-                        : 'border-[#2d3748] bg-[#1e293b]/40 text-[#94a3b8] hover:border-[#475569] hover:bg-[#1e293b]'
-                    }`}
-                  >
-                    <span className="text-xs font-semibold leading-tight">{role.label}</span>
-                    <span className="mono-font mt-1 text-[9px] text-[#64748b]">{role.code}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+
 
             {/* Login Form */}
             <form onSubmit={handleLogin} className="mt-6 flex flex-col gap-4">
               <div>
                 <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-[#cbd5e1]">
                   <span>Clearance ID / Username</span>
-                  <span className="mono-font text-[10px] text-[#64748b]">Default: officer</span>
                 </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-[#64748b]">
@@ -291,7 +237,7 @@ function LoginPage({ onLogin }) {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full rounded-xl border border-[#334155] bg-[#0f172a]/70 py-2.5 pl-10 pr-3 text-sm text-white placeholder-[#475569] transition focus:border-[#507e9b] focus:bg-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#507e9b]/30"
-                    placeholder="officer"
+                    placeholder="Enter your clearance ID"
                     required
                   />
                 </div>
@@ -300,7 +246,6 @@ function LoginPage({ onLogin }) {
               <div>
                 <label className="mb-1.5 flex items-center justify-between text-xs font-medium text-[#cbd5e1]">
                   <span>Security Access Key</span>
-                  <span className="mono-font text-[10px] text-[#64748b]">Default: password</span>
                 </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-[#64748b]">
@@ -334,7 +279,7 @@ function LoginPage({ onLogin }) {
               {/* Primary Action Button */}
               <button
                 type="submit"
-                disabled={isLoading || isBiometricScanning}
+                disabled={isLoading}
                 className="group relative mt-2 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[#d35d45] via-[#db6952] to-[#c44930] py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(211,93,69,0.35)] transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-70 cursor-pointer"
               >
                 {isLoading ? (
@@ -350,25 +295,7 @@ function LoginPage({ onLogin }) {
                 )}
               </button>
 
-              {/* One-Click Biometric/Keycard Fast Pass */}
-              <button
-                type="button"
-                onClick={handleBiometricAuth}
-                disabled={isLoading || isBiometricScanning}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#3e8c6c]/40 bg-[#3e8c6c]/10 py-2.5 text-xs font-semibold text-[#5de3aa] transition hover:bg-[#3e8c6c]/20 active:scale-[0.99] cursor-pointer"
-              >
-                {isBiometricScanning ? (
-                  <>
-                    <LoaderCircle className="animate-spin text-[#5de3aa]" size={16} />
-                    <span>Validating Keycard Hash...</span>
-                  </>
-                ) : (
-                  <>
-                    <Fingerprint size={16} className="text-[#5de3aa]" />
-                    <span>Simulate Security Keycard Pass (One-Click)</span>
-                  </>
-                )}
-              </button>
+
             </form>
           </div>
 
@@ -390,9 +317,13 @@ function LoginPage({ onLogin }) {
 function AppShell({ onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
   const location = useLocation();
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
+
+  const summaryQuery = useGetValidationSummary({ query: { queryKey: getGetValidationSummaryQueryKey() } });
+  const anomalyCount = summaryQuery.data?.totalAnomalies || 0;
 
   return (
     <div className="app-shell relative">
@@ -415,7 +346,7 @@ function AppShell({ onLogout }) {
         <nav className="relative z-10 mt-12 flex flex-1 flex-col gap-1" aria-label="Primary navigation">
           <p className="mono-font mb-2 px-3 text-[9px] uppercase tracking-[0.16em] text-[#dce8de]/35">Workspace</p>
           <SideNavLink to="/" icon={LayoutDashboard} label="Overview" end />
-          <SideNavLink to="/anomalies" icon={CircleAlert} label="Anomaly report" />
+          <SideNavLink to="/anomalies" icon={CircleAlert} label="Anomaly report" badge={anomalyCount} />
           <SideNavLink to="/upload" icon={UploadCloud} label="Ingest survey" />
           <SideNavLink to="/rules" icon={ClipboardCheck} label="Validation rules" />
           <p className="mono-font mb-2 mt-9 px-3 text-[9px] uppercase tracking-[0.16em] text-[#dce8de]/35">Workspace tools</p>
@@ -432,13 +363,13 @@ function AppShell({ onLogout }) {
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-[#dce8de]/50">AI Validator Engine<br /><span className="text-[#dce8de]/80">v2.4 Active · 18ms</span></p>
         </div>
-        <div className="relative z-10 mt-4 flex items-center gap-2 px-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e8b06a] text-[10px] font-bold text-[#273446]">AM</span>
+        <div className="relative z-10 mt-4 flex items-center gap-2 px-2 cursor-pointer rounded-lg hover:bg-[#dce8de]/5 p-1 transition" onClick={() => setShowUserProfile(true)}>
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e8b06a] text-[10px] font-bold text-[#273446]">O</span>
           <div className="min-w-0">
-            <p className="truncate text-[11px] font-semibold text-[#edf2e9]">Amina Malik</p>
-            <p className="truncate text-[10px] text-[#dce8de]/45">Quality analyst</p>
+            <p className="truncate text-[11px] font-semibold text-[#edf2e9]">Officer</p>
+            <p className="truncate text-[10px] text-[#dce8de]/45">Validation office</p>
           </div>
-          <button onClick={onLogout} className="ml-auto rounded p-1 text-[#dce8de]/45 transition hover:bg-[#dce8de]/10 hover:text-white" title="Log out">
+          <button onClick={(e) => { e.stopPropagation(); onLogout(); }} className="ml-auto shrink-0 rounded p-1 text-[#dce8de]/45 transition hover:bg-[#dce8de]/20 hover:text-white" title="Log out">
             <X size={15} />
           </button>
         </div>
@@ -466,18 +397,73 @@ function AppShell({ onLogout }) {
 
       {/* Official UK ONS Executive Compliance Certificate Modal */}
       {showComplianceModal && <OfficialONSAuditModal onClose={() => setShowComplianceModal(false)} />}
+      
+      {/* User Profile Modal */}
+      {showUserProfile && <UserProfileModal onClose={() => setShowUserProfile(false)} />}
 
       {mobileOpen && <button className="fixed inset-0 z-40 hidden bg-[#172338]/30 md:block" onClick={() => setMobileOpen(false)} data-testid="button-dismiss-mobile-menu" aria-label="Close menu overlay" />}
     </div>
   );
 }
 
-function SideNavLink({ to, icon: Icon, label, end }) {
+function UserProfileModal({ onClose }) {
+  useEffect(() => {
+    const close = (event) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [onClose]);
+
+  return (
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-card w-full max-w-sm overflow-hidden rounded-2xl bg-[#faf8f3] shadow-2xl text-[#273446] border-2 border-[#e5e0d8]">
+        <div className="relative h-24 bg-gradient-to-r from-[#273446] to-[#161f30]">
+          <button onClick={onClose} className="absolute right-3 top-3 rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="px-6 pb-6 pt-0 relative">
+          <div className="absolute -top-10 left-6 flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-[#faf8f3] bg-[#e8b06a] text-2xl font-bold text-[#273446] shadow-md">
+            O
+          </div>
+          <div className="mt-14">
+            <h2 className="text-xl font-bold text-[#161f30]">Officer</h2>
+            <p className="text-sm text-[#64748b]">Validation & Compliance</p>
+          </div>
+          
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center gap-3 text-sm text-[#475569]">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e5e0d8]"><ShieldCheck size={16} className="text-[#273446]" /></div>
+              <div>
+                <p className="font-semibold text-[#161f30]">System Access</p>
+                <p className="text-[11px]">Level 3 Clearance (Audit & Resolution)</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-[#475569]">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e5e0d8]"><Clock3 size={16} className="text-[#273446]" /></div>
+              <div>
+                <p className="font-semibold text-[#161f30]">Active Session</p>
+                <p className="text-[11px]">Started at {new Date().toLocaleTimeString()}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-8 border-t border-[#e5e0d8] pt-4">
+            <button onClick={onClose} className="w-full rounded-lg bg-[#273446] py-2.5 text-sm font-semibold text-white transition hover:bg-[#161f30]">
+              Close Profile
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SideNavLink({ to, icon: Icon, label, end, badge }) {
   return (
     <NavLink to={to} end={end} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>
       <Icon size={16} strokeWidth={1.7} />
       <span className="text-[13px]">{label}</span>
-      {label === 'Anomaly report' && <span className="mono-font ml-auto rounded-full bg-[#d35d45] px-1.5 py-0.5 text-[9px] text-[#fff5e9]">672</span>}
+      {badge != null && badge > 0 && <span className="mono-font ml-auto rounded-full bg-[#d35d45] px-1.5 py-0.5 text-[9px] text-[#fff5e9]">{formatNumber(badge)}</span>}
     </NavLink>
   );
 }
@@ -532,7 +518,7 @@ function DashboardPage() {
 
       <section className="stagger mt-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Records reviewed" value={formatNumber(summary.totalRecords)} note="Across 8 regional files" icon={Database} tone="metric-ink" trend="12.8%" trendUp />
-        <MetricCard label="Anomalies detected" value={formatNumber(summary.totalAnomalies)} note="672 need a decision" icon={CircleAlert} tone="metric-accent" trend="4.1%" trendUp={false} />
+        <MetricCard label="Anomalies detected" value={formatNumber(summary.totalAnomalies)} note={`${formatNumber(summary.totalAnomalies)} need a decision`} icon={CircleAlert} tone="metric-accent" trend="4.1%" trendUp={false} />
         <MetricCard label="High-risk enumerators" value={formatNumber(summary.highRiskEnumerators)} note="Across 5 regions" icon={ShieldCheck} tone="metric-gold" trend="3 fewer" trendUp={false} />
         <MetricCard label="Anomaly rate" value={`${Number(summary.anomalyRate).toFixed(2)}%`} note="Down from 4.08% last wave" icon={Gauge} tone="metric-teal" trend="0.44 pts" trendUp={false} />
       </section>
@@ -959,13 +945,15 @@ function AnomaliesPage() {
     document.body.removeChild(link);
   };
 
-  return <main className="content-wrap page-enter"><section className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><div className="eyebrow flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#d35d45]" /> Explainable review</div><h1 className="display-font mt-3 text-[clamp(2.65rem,5vw,4.25rem)] leading-[.94] tracking-[-.03em]">Follow the<br /><em className="text-[#b74d39]">evidence.</em></h1><p className="mt-5 max-w-[35rem] text-[14px] leading-relaxed text-[#72756e]">Each flagged record carries a reason, a confidence score, and the context needed to make a defensible decision.</p></div><div className="flex items-center gap-2"><span className="mono-font rounded-full bg-[#f0ddd5] px-3 py-2 text-[10px] text-[#9e4d3b]">{formatNumber(rows.length)} visible records</span><button onClick={async () => { await fetch('http://127.0.0.1:5000/api/anomalies/auto-remove', { method: 'POST' }); window.alert('5 days simulated. Unresponsive records removed.'); window.location.reload(); }} className="flex items-center gap-2 rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-3 py-2.5 text-[11px] font-semibold text-[#8c392a] transition hover:border-[#b74d39] hover:bg-[#fbf5ed]" data-testid="button-simulate-time"><Clock3 size={14} /> Simulate 5 Days</button><button onClick={exportToCSV} className="flex items-center gap-2 rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-3 py-2.5 text-[11px] font-semibold text-[#42515a] transition hover:border-[#b74d39]" data-testid="button-export-anomalies"><Download size={14} /> Export</button></div></section>
-    <section className="surface mt-10 overflow-hidden rounded-xl"><div className="flex flex-col gap-3 border-b border-[#e3ded6] p-4 sm:flex-row sm:items-center sm:justify-between"><div className="relative flex-1 sm:max-w-[24rem]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#92948c]" /><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search record, enumerator, region…" className="h-10 w-full rounded-lg border border-[#d7d1c8] bg-[#fbfaf6] pl-9 pr-3 text-[12px] outline-none transition placeholder:text-[#9b9b93] focus:border-[#b74d39] focus:ring-2 focus:ring-[#d35d45]/10" data-testid="input-anomaly-search" /></div><div className="flex items-center gap-2"><Filter size={14} className="text-[#85877f]" /><span className="mono-font text-[9px] uppercase tracking-[.1em] text-[#85877f]">Risk</span>{['All', 'Critical', 'High', 'Medium', 'Low'].map((value) => <button key={value} onClick={() => setRisk(value)} className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition ${risk === value ? 'bg-[#273446] text-[#f4f0e9]' : 'text-[#74766f] hover:bg-[#eeeae3]'}`} data-testid={`button-filter-risk-${value.toLowerCase()}`}>{value}</button>)}</div></div>
-      {anomalyQuery.isLoading && !anomalyQuery.data ? <TableSkeleton /> : rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left"><thead className="bg-[#f5f1ea]"><tr className="mono-font text-[9px] uppercase tracking-[.1em] text-[#878980]"><th className="px-5 py-3 font-normal">Record / enumerator</th><th className="px-4 py-3 font-normal">Region</th><th className="px-4 py-3 font-normal">Profile</th><th className="px-4 py-3 font-normal">Reason</th><th className="px-4 py-3 font-normal">Risk</th><th className="px-4 py-3 font-normal">Score</th><th className="px-4 py-3 font-normal" /></tr></thead><tbody className="divide-y divide-[#ebe6df]">{rows.map((row) => <AnomalyRow key={row.id} row={row} onSelect={setSelected} />)}</tbody></table></div> : <EmptyAnomalies onClear={() => { setSearch(''); setRisk('All'); }} />}
-      <div className="flex items-center justify-between border-t border-[#e3ded6] px-5 py-3"><span className="text-[10px] text-[#92938c]">{isDemo ? 'Illustrative records shown while the service connects' : 'Live records from validation service'}</span><span className="mono-font text-[9px] uppercase tracking-[.1em] text-[#a09e96]">Click a row for explanation</span></div>
-    </section>
+  return <>
+    <main className="content-wrap page-enter"><section className="flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><div className="eyebrow flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#d35d45]" /> Explainable review</div><h1 className="display-font mt-3 text-[clamp(2.65rem,5vw,4.25rem)] leading-[.94] tracking-[-.03em]">Follow the<br /><em className="text-[#b74d39]">evidence.</em></h1><p className="mt-5 max-w-[35rem] text-[14px] leading-relaxed text-[#72756e]">Each flagged record carries a reason, a confidence score, and the context needed to make a defensible decision.</p></div><div className="flex items-center gap-2"><span className="mono-font rounded-full bg-[#f0ddd5] px-3 py-2 text-[10px] text-[#9e4d3b]">{formatNumber(rows.length)} visible records</span><button onClick={async () => { await fetch('http://127.0.0.1:5000/api/anomalies/auto-remove', { method: 'POST' }); window.alert('5 days simulated. Unresponsive records removed.'); window.location.reload(); }} className="flex items-center gap-2 rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-3 py-2.5 text-[11px] font-semibold text-[#8c392a] transition hover:border-[#b74d39] hover:bg-[#fbf5ed]" data-testid="button-simulate-time"><Clock3 size={14} /> Simulate 5 Days</button><button onClick={exportToCSV} className="flex items-center gap-2 rounded-lg border border-[#cbc5bc] bg-[#faf8f3] px-3 py-2.5 text-[11px] font-semibold text-[#42515a] transition hover:border-[#b74d39]" data-testid="button-export-anomalies"><Download size={14} /> Export</button></div></section>
+      <section className="surface mt-10 overflow-hidden rounded-xl"><div className="flex flex-col gap-3 border-b border-[#e3ded6] p-4 sm:flex-row sm:items-center sm:justify-between"><div className="relative flex-1 sm:max-w-[24rem]"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#92948c]" /><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search record, enumerator, region…" className="h-10 w-full rounded-lg border border-[#d7d1c8] bg-[#fbfaf6] pl-9 pr-3 text-[12px] outline-none transition placeholder:text-[#9b9b93] focus:border-[#b74d39] focus:ring-2 focus:ring-[#d35d45]/10" data-testid="input-anomaly-search" /></div><div className="flex items-center gap-2"><Filter size={14} className="text-[#85877f]" /><span className="mono-font text-[9px] uppercase tracking-[.1em] text-[#85877f]">Risk</span>{['All', 'Critical', 'High', 'Medium', 'Low'].map((value) => <button key={value} onClick={() => setRisk(value)} className={`rounded-md px-2.5 py-1.5 text-[10px] font-semibold transition ${risk === value ? 'bg-[#273446] text-[#f4f0e9]' : 'text-[#74766f] hover:bg-[#eeeae3]'}`} data-testid={`button-filter-risk-${value.toLowerCase()}`}>{value}</button>)}</div></div>
+        {anomalyQuery.isLoading && !anomalyQuery.data ? <TableSkeleton /> : rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left"><thead className="bg-[#f5f1ea]"><tr className="mono-font text-[9px] uppercase tracking-[.1em] text-[#878980]"><th className="px-5 py-3 font-normal">Record / enumerator</th><th className="px-4 py-3 font-normal">Region</th><th className="px-4 py-3 font-normal">Profile</th><th className="px-4 py-3 font-normal">Reason</th><th className="px-4 py-3 font-normal">Risk</th><th className="px-4 py-3 font-normal">Score</th><th className="px-4 py-3 font-normal" /></tr></thead><tbody className="divide-y divide-[#ebe6df]">{rows.map((row) => <AnomalyRow key={row.id} row={row} onSelect={setSelected} />)}</tbody></table></div> : <EmptyAnomalies onClear={() => { setSearch(''); setRisk('All'); }} />}
+        <div className="flex items-center justify-between border-t border-[#e3ded6] px-5 py-3"><span className="text-[10px] text-[#92938c]">{isDemo ? 'Illustrative records shown while the service connects' : 'Live records from validation service'}</span><span className="mono-font text-[9px] uppercase tracking-[.1em] text-[#a09e96]">Click a row for explanation</span></div>
+      </section>
+    </main>
     {selected && <AnomalyModal row={selected} onClose={() => setSelected(null)} />}
-  </main>;
+  </>;
 }
 
 function AnomalyRow({ row, onSelect }) {
@@ -1118,7 +1106,17 @@ function AnomalyModal({ row, onClose }) {
           <div className="mt-4">
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-xl border border-[#e5e0d8] bg-white p-4 sm:grid-cols-3">
               <DetailLine label="Age" value={`${row.age} years`} />
+              <DetailLine label="Gender" value={row.gender || 'Unknown'} />
+              <DetailLine label="Maternity Leave" value={row.maternity_leave ? 'Yes' : 'No'} />
               <DetailLine label="Education" value={row.education || 'Not stated'} />
+              <DetailLine label="Industry" value={row.industry || 'Not stated'} />
+              <DetailLine label="Occupation" value={row.occupation || 'Not stated'} />
+              <DetailLine label="Years Experience" value={`${row.years_experience || 0} years`} />
+              <DetailLine label="Work Hours" value={`${row.work_hours || 0} hrs/week`} />
+              <DetailLine label="Household Size" value={row.household_size || 1} />
+              <DetailLine label="Monthly Expenses" value={formatCurrency(row.monthly_expenses || 0)} />
+              <DetailLine label="GPS Location" value={row.gps_location || 'Not provided'} />
+              <DetailLine label="Pin Code" value={row.pin_code || 'Not provided'} />
               <DetailLine label="Survey region" value={row.region} />
               <DetailLine label="Record status" value={row.status} />
               <DetailLine label="Enumerator" value={row.enumeratorId} />
@@ -1248,7 +1246,7 @@ function CensusCopilot({ onOpenAudit }) {
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
-      text: "Hello Officer Malik. I am **Signal AI Copilot (v2.4)**. I am monitoring the active 10,000+ census records and 20+ cross-constraint rules. How can I assist you today?",
+      text: "Hello Officer Malik. I am **H2 AI (v2.4)**. I am monitoring the active 10,000+ census records and 20+ cross-constraint rules. How can I assist you today?",
       quickPills: [
         '⚡ High-Risk Anomaly Summary',
         '🔍 Explain Underage Anomaly',
@@ -1258,7 +1256,7 @@ function CensusCopilot({ onOpenAudit }) {
     }
   ]);
 
-  const handleSend = (textToSend) => {
+  const handleSend = async (textToSend) => {
     const userText = textToSend || query;
     if (!userText.trim()) return;
 
@@ -1267,31 +1265,27 @@ function CensusCopilot({ onOpenAudit }) {
     setQuery('');
     setIsTyping(true);
 
-    setTimeout(() => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText })
+      });
+      
       let aiReply = '';
-      let pills = [];
-
-      const lower = userText.toLowerCase();
-      if (lower.includes('high-risk') || lower.includes('summary') || lower.includes('high risk')) {
-        aiReply = `📊 **Quality & Anomaly Summary (Wave 03/2024):**\n\n• **Total Ingested:** 10,000 records.\n• **High-Risk Flags:** 31% concentrated across 3 enumerators (notably \`ENUM-042\` in North West).\n• **Top Anomaly Category:** Underage high earners (\`Age < 18 & Income > £50k\`) & Zero-income full-time employment.\n• **System Anomaly Rate:** **4.08%** (Within ONS tolerance).`;
-        pills = ['🗺️ Regional Hotspots', '📄 Open ONS Audit Certificate'];
-      } else if (lower.includes('underage') || lower.includes('age') || lower.includes('explain')) {
-        aiReply = `🔍 **Cross-Constraint Rule Analysis:**\n\n\`Rule #CR-002 (Age / Income Inconsistency)\` triggers when a respondent declares \`Age < 18\` with full-time professional income (\`> £45,000\`).\n\n**IsolationForest ML Risk Score:** 94% anomaly confidence due to extreme deviation from standard UK demographic earnings curve. Recommended Action: Dispatch field re-verification.`;
-        pills = ['⚡ High-Risk Anomaly Summary', '🛠️ Draft Rule for Rent/Income'];
-      } else if (lower.includes('regional') || lower.includes('region') || lower.includes('hotspot')) {
-        aiReply = `🗺️ **Regional Anomaly Hotspots:**\n\n1. **North West:** 142 flagged records (High variance in reported rental yields).\n2. **London:** 118 flagged records (Extreme wage distribution clusters).\n3. **Yorkshire:** 89 flagged records.\n\nAll other regions are within standard nominal standard deviations (< 2.1%).`;
-        pills = ['⚡ High-Risk Anomaly Summary', '📄 Open ONS Audit Certificate'];
-      } else if (lower.includes('rule') || lower.includes('draft') || lower.includes('rent')) {
-        aiReply = `🛠️ **Suggested Validation Rule Formulation:**\n\n**Name:** \`Rent-to-Income Feasibility Check\`\n**Condition:** \`monthly_rent * 12 > annual_income * 0.70 AND annual_income > 0\`\n**Action:** \`Flag for Analyst Review\`\n\nWould you like me to register this rule directly in the Control Library?`;
-        pills = ['⚡ High-Risk Anomaly Summary', '🔍 Explain Underage Anomaly'];
+      if (response.ok) {
+        const data = await response.json();
+        aiReply = data.response || "Sorry, I couldn't generate a response.";
       } else {
-        aiReply = `🤖 I've analyzed our live database for *"__${userText}__"*. The active neural validator model reports **99.8% precision** across all active batches with **0 critical integrity failures**. You can run a custom rule pass in the Ingestion Workspace anytime.`;
-        pills = ['⚡ High-Risk Anomaly Summary', '🗺️ Regional Hotspots'];
+        aiReply = "Error connecting to the AI backend.";
       }
-
-      setMessages([...newMsgs, { sender: 'ai', text: aiReply, quickPills: pills }]);
+      
+      setMessages([...newMsgs, { sender: 'ai', text: aiReply, quickPills: ['⚡ High-Risk Anomaly Summary', '🗺️ Regional Hotspots'] }]);
+    } catch (err) {
+      setMessages([...newMsgs, { sender: 'ai', text: "Error connecting to the AI backend.", quickPills: ['⚡ High-Risk Anomaly Summary', '🗺️ Regional Hotspots'] }]);
+    } finally {
       setIsTyping(false);
-    }, 600);
+    }
   };
 
   return (
@@ -1307,7 +1301,7 @@ function CensusCopilot({ onOpenAudit }) {
           <span className="relative inline-flex h-3 w-3 rounded-full bg-[#49cc94]"></span>
         </span>
         <Sparkles size={16} className="text-[#e8b06a]" />
-        <span className="text-xs font-bold tracking-wide">AI Census Copilot</span>
+        <span className="text-xs font-bold tracking-wide">H2 AI</span>
       </button>
 
       {/* Slide-over Drawer */}
@@ -1325,7 +1319,7 @@ function CensusCopilot({ onOpenAudit }) {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    Census AI Copilot
+                    H2 AI
                     <span className="mono-font text-[9px] rounded bg-[#3e8c6c]/20 px-1.5 py-0.5 text-[#5de3aa] border border-[#3e8c6c]/40">v2.4</span>
                   </h3>
                   <p className="mono-font text-[10px] text-[#94a3b8]">Live Telemetry & Anomaly Analysis</p>
@@ -1394,7 +1388,7 @@ function CensusCopilot({ onOpenAudit }) {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Ask Census Copilot a question..."
+                  placeholder="Ask H2 AI a question..."
                   className="flex-1 rounded-xl border border-[#334155] bg-[#0f172a] px-3.5 py-2.5 text-xs text-white placeholder-[#64748b] focus:border-[#507e9b] focus:outline-none"
                 />
                 <button
@@ -1417,6 +1411,18 @@ function CensusCopilot({ onOpenAudit }) {
 // FEATURE 3: OFFICIAL UK ONS AUDIT CERTIFICATE
 // ==========================================
 function OfficialONSAuditModal({ onClose }) {
+  const summaryQuery = useGetValidationSummary({ query: { queryKey: getGetValidationSummaryQueryKey() } });
+  const rulesQuery = useGetValidationRules({ query: { queryKey: getGetValidationRulesQueryKey() } });
+  
+  const data = summaryQuery.data;
+  const totalRecords = data?.totalRecords || 0;
+  const anomalyRateStr = data?.anomalyRate?.toFixed(2) || '0.00';
+  const integrityStr = data ? (100 - data.anomalyRate).toFixed(2) : '100.00';
+  
+  const rules = rulesQuery.data || [];
+  const activeRulesCount = rules.filter(r => r.status === 'Active').length || 0;
+  const regionalAnomalies = data?.regionalAnomalies || [];
+
   useEffect(() => {
     const close = (event) => event.key === 'Escape' && onClose();
     window.addEventListener('keydown', close);
@@ -1460,26 +1466,26 @@ function OfficialONSAuditModal({ onClose }) {
               <span>COMPLIANCE STATUS: VERIFIED & AUDIT APPROVED</span>
             </div>
             <p className="mt-1 text-xs text-[#315c52] leading-relaxed">
-              This data stream has been verified against 20+ statutory deterministic constraints and the IsolationForest multi-variable anomaly scoring engine with zero critical divergence flags.
+              This data stream has been verified against {activeRulesCount}+ statutory deterministic constraints and the IsolationForest multi-variable anomaly scoring engine with zero critical divergence flags.
             </p>
           </div>
 
           {/* Certificate Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-lg border border-[#e5e0d8] bg-white p-3 text-center">
-              <span className="mono-font text-lg font-bold text-[#161f30]">10,000+</span>
+              <span className="mono-font text-lg font-bold text-[#161f30]">{formatNumber(totalRecords)}</span>
               <p className="text-[10px] uppercase tracking-wider text-[#64748b]">Verified Records</p>
             </div>
             <div className="rounded-lg border border-[#e5e0d8] bg-white p-3 text-center">
-              <span className="mono-font text-lg font-bold text-[#3e8c6c]">99.84%</span>
+              <span className="mono-font text-lg font-bold text-[#3e8c6c]">{integrityStr}%</span>
               <p className="text-[10px] uppercase tracking-wider text-[#64748b]">Data Integrity</p>
             </div>
             <div className="rounded-lg border border-[#e5e0d8] bg-white p-3 text-center">
-              <span className="mono-font text-lg font-bold text-[#b74d39]">0.44%</span>
+              <span className="mono-font text-lg font-bold text-[#b74d39]">{anomalyRateStr}%</span>
               <p className="text-[10px] uppercase tracking-wider text-[#64748b]">Residual Anomaly</p>
             </div>
             <div className="rounded-lg border border-[#e5e0d8] bg-white p-3 text-center">
-              <span className="mono-font text-lg font-bold text-[#507e9b]">20 Rules</span>
+              <span className="mono-font text-lg font-bold text-[#507e9b]">{activeRulesCount} Rules</span>
               <p className="text-[10px] uppercase tracking-wider text-[#64748b]">Active Controls</p>
             </div>
           </div>
@@ -1498,24 +1504,32 @@ function OfficialONSAuditModal({ onClose }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#ebe6df]">
-                  <tr>
-                    <td className="p-2.5 font-medium">North West</td>
-                    <td className="p-2.5 mono-font">2,450</td>
-                    <td className="p-2.5 mono-font text-[#b74d39]">4.2%</td>
-                    <td className="p-2.5"><span className="rounded bg-[#3e8c6c]/20 px-2 py-0.5 text-[10px] font-bold text-[#2d735d]">PASSED</span></td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-medium">Greater London</td>
-                    <td className="p-2.5 mono-font">3,120</td>
-                    <td className="p-2.5 mono-font text-[#3e8c6c]">1.8%</td>
-                    <td className="p-2.5"><span className="rounded bg-[#3e8c6c]/20 px-2 py-0.5 text-[10px] font-bold text-[#2d735d]">PASSED (EXCELLENT)</span></td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-medium">Yorkshire & The Humber</td>
-                    <td className="p-2.5 mono-font">1,890</td>
-                    <td className="p-2.5 mono-font text-[#3e8c6c]">2.1%</td>
-                    <td className="p-2.5"><span className="rounded bg-[#3e8c6c]/20 px-2 py-0.5 text-[10px] font-bold text-[#2d735d]">PASSED</span></td>
-                  </tr>
+                  {regionalAnomalies.map((region) => {
+                    const rate = region.total > 0 ? (region.anomalies / region.total) * 100 : 0;
+                    let rating = "PASSED";
+                    let ratingColor = "text-[#2d735d]";
+                    let ratingBg = "bg-[#3e8c6c]/20";
+                    if (rate > 5) {
+                      rating = "WARNING";
+                      ratingColor = "text-[#b74d39]";
+                      ratingBg = "bg-[#b74d39]/20";
+                    } else if (rate < 2 && rate > 0) {
+                      rating = "PASSED (EXCELLENT)";
+                    }
+                    return (
+                      <tr key={region.region}>
+                        <td className="p-2.5 font-medium">{region.region}</td>
+                        <td className="p-2.5 mono-font">{formatNumber(region.total)}</td>
+                        <td className={`p-2.5 mono-font ${rate > 5 ? 'text-[#b74d39]' : 'text-[#3e8c6c]'}`}>{rate.toFixed(1)}%</td>
+                        <td className="p-2.5"><span className={`rounded px-2 py-0.5 text-[10px] font-bold ${ratingBg} ${ratingColor}`}>{rating}</span></td>
+                      </tr>
+                    );
+                  })}
+                  {regionalAnomalies.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="p-4 text-center text-xs text-[#64748b]">No regional data available yet.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
